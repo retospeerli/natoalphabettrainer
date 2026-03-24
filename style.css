@@ -1,6 +1,5 @@
 :root {
   --bg: #eef4ff;
-  --bg-2: #f8fbff;
   --card: rgba(255, 255, 255, 0.95);
   --line: #d8e3f2;
   --text: #142033;
@@ -94,7 +93,8 @@ h1 {
 
 .status-row,
 .topbar-pills,
-.action-row {
+.action-row,
+.selection-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -111,7 +111,8 @@ h1 {
   font-weight: 700;
 }
 
-.speed-card {
+.speed-card,
+.selection-card {
   padding-top: 20px;
 }
 
@@ -140,6 +141,42 @@ h1 {
   font-weight: 800;
   color: var(--blue-dark);
   min-width: 64px;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.category-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 12px 14px;
+}
+
+.category-option input[type="checkbox"] {
+  margin-top: 3px;
+  transform: scale(1.2);
+}
+
+.category-option-label {
+  display: grid;
+  gap: 4px;
+}
+
+.category-option-title {
+  font-weight: 800;
+}
+
+.category-option-sub {
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .menu-grid {
@@ -296,7 +333,7 @@ h1 {
 
 .touch-keyboard {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
