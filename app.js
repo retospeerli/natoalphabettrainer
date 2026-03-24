@@ -48,6 +48,10 @@ const exerciseScreen = document.getElementById('exerciseScreen');
 const resultScreen = document.getElementById('resultScreen');
 
 const speechStatusPill = document.getElementById('speechStatusPill');
+const speedSlider = document.getElementById('speedSlider');
+const speedValue = document.getElementById('speedValue');
+const speedInfoPill = document.getElementById('speedInfoPill');
+
 const overviewGrid = document.getElementById('overviewGrid');
 const modeLabel = document.getElementById('modeLabel');
 const progressLabel = document.getElementById('progressLabel');
@@ -65,7 +69,8 @@ const typedAnswerBox = document.getElementById('typedAnswerBox');
 const typedAnswerText = document.getElementById('typedAnswerText');
 const touchKeyboard = document.getElementById('touchKeyboard');
 const speechBox = document.getElementById('speechBox');
-const recognitionText = document.getElementById('recognitionText');
+const recognizedCodeWordsText = document.getElementById('recognizedCodeWordsText');
+const derivedLettersText = document.getElementById('derivedLettersText');
 const feedbackBox = document.getElementById('feedbackBox');
 const sideHintText = document.getElementById('sideHintText');
 const resultTitle = document.getElementById('resultTitle');
@@ -81,7 +86,12 @@ let score = 0;
 let tasks = [];
 let results = [];
 let typedAnswer = '';
-let latestTranscript = '';
+let playbackRate = 0.85;
+
+/* Nur Daten der aktuellen Aufgabe */
+let currentTranscriptRaw = '';
+let currentRecognizedCodeWords = [];
+let currentDerivedLetters = '';
 
 const modeMeta = {
   alphabetListen: {
@@ -104,7 +114,7 @@ const modeMeta = {
     label: 'Alphabet sprechen',
     title: 'Sprich den passenden NATO-Begriff',
     instruction: 'Sprich zum angezeigten Buchstaben den passenden NATO-Begriff.',
-    hint: 'Beispiel: Bei B sprichst du Bravo.',
+    hint: 'Die App prüft den erkannten NATO-Begriff, nicht den Buchstabennamen.',
     useKeyboard: false,
     useSpeech: true
   },
@@ -112,7 +122,7 @@ const modeMeta = {
     label: 'Wörter sprechen',
     title: 'Buchstabiere das Wort laut',
     instruction: 'Sprich für jeden Buchstaben den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Beispiel: CAT = Charlie Alfa Tango.',
+    hint: 'Die App zeigt getrennt an: erkannte NATO-Wörter und daraus abgeleitete Buchstaben.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -156,6 +166,35 @@ function sample(array, count) {
   return shuffle(array).slice(0, count);
 }
 
+function formatSpeed(value) {
+  return `${Number(value).toFixed(2)}×`;
+}
+
+function updateSpeedUI() {
+  if (speedValue) {
+    speedValue.textContent = formatSpeed(playbackRate);
+  }
+  if (speedInfoPill) {
+    speedInfoPill.textContent = `Tempo: ${formatSpeed(playbackRate)}`;
+  }
+}
+
+function loadSavedSpeed() {
+  const saved = localStorage.getItem('natoPlaybackRate');
+  if (saved) {
+    const num = Number(saved);
+    if (!Number.isNaN(num) && num >= 0.5 && num <= 1.5) {
+      playbackRate = num;
+    }
+  }
+
+  if (speedSlider) {
+    speedSlider.value = String(playbackRate);
+  }
+
+  updateSpeedUI();
+}
+
 function buildOverview() {
   overviewGrid.innerHTML = '';
   Object.entries(NATO).forEach(([letter, codeWord]) => {
@@ -164,52 +203,6 @@ function buildOverview() {
     item.innerHTML = `<strong>${letter}</strong> – ${codeWord}`;
     overviewGrid.appendChild(item);
   });
-}
-
-function updateSpeechAvailability() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognitionSupported = Boolean(SpeechRecognition);
-
-  if (!recognitionSupported) {
-    speechStatusPill.textContent = 'Spracherkennung nicht verfügbar';
-    return;
-  }
-
-  speechStatusPill.textContent = 'Spracherkennung verfügbar';
-  recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  recognition.onstart = () => {
-    recognitionRunning = true;
-    setFeedback('Aufnahme läuft.', 'neutral');
-  };
-
-  recognition.onend = () => {
-    recognitionRunning = false;
-  };
-
-  recognition.onerror = (event) => {
-    recognitionRunning = false;
-    setFeedback(`Spracherkennung: ${event.error}`, 'bad');
-  };
-
-  recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = 0; i < event.results.length; i += 1) {
-      transcript += `${event.results[i][0].transcript} `;
-    }
-    latestTranscript = transcript.trim();
-    recognitionText.textContent = latestTranscript || 'Noch keine Sprachdaten.';
-  };
-}
-
-function generateTasks(mode) {
-  if (mode === 'alphabetListen' || mode === 'alphabetSpeak') {
-    return sample(LETTERS, SESSION_LENGTH).map((letter) => ({ letter }));
-  }
-  return sample(WORDS, SESSION_LENGTH).map((word) => ({ word }));
 }
 
 function setFeedback(message, type) {
@@ -267,6 +260,7 @@ function sleep(ms) {
 function playAudioFile(src) {
   return new Promise((resolve) => {
     const audio = new Audio(src);
+    audio.playbackRate = playbackRate;
 
     audio.onended = () => resolve(true);
     audio.onerror = () => resolve(false);
@@ -287,7 +281,7 @@ function playWithTTS(parts) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(parts.join(' ... '));
     utterance.lang = 'en-US';
-    utterance.rate = 0.72;
+    utterance.rate = playbackRate;
     utterance.onend = () => resolve(true);
     utterance.onerror = () => resolve(false);
     window.speechSynthesis.speak(utterance);
@@ -316,25 +310,32 @@ async function playCurrentTask() {
     const codeWords = natoForWord(task.word);
     for (const codeWord of codeWords) {
       await playCodeWord(codeWord);
-      await sleep(220);
+      await sleep(Math.max(120, 320 / playbackRate));
     }
   }
 }
 
-function startRecognition() {
-  if (!recognitionSupported || !recognition) {
-    setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
-    return;
-  }
+function extractRecognizedCodeWords(transcript) {
+  return normalizeCodeWord(transcript)
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => REVERSE_NATO[token]);
+}
 
-  latestTranscript = '';
-  recognitionText.textContent = 'Ich höre zu …';
+function lettersFromCodeWords(codeWords) {
+  return codeWords.map((word) => REVERSE_NATO[word]).join('');
+}
 
-  try {
-    recognition.start();
-  } catch (error) {
-    setFeedback('Aufnahme konnte nicht gestartet werden.', 'bad');
-  }
+function updateSpeechViews() {
+  recognizedCodeWordsText.textContent = currentRecognizedCodeWords.join(' ') || '—';
+  derivedLettersText.textContent = currentDerivedLetters || '—';
+}
+
+function resetSpeechState() {
+  currentTranscriptRaw = '';
+  currentRecognizedCodeWords = [];
+  currentDerivedLetters = '';
+  updateSpeechViews();
 }
 
 function stopRecognition() {
@@ -343,17 +344,71 @@ function stopRecognition() {
   }
 }
 
-function extractLettersFromTranscript(transcript) {
-  const tokens = normalizeCodeWord(transcript).split(/\s+/).filter(Boolean);
-  let result = '';
+function updateSpeechAvailability() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognitionSupported = Boolean(SpeechRecognition);
 
-  tokens.forEach((token) => {
-    if (REVERSE_NATO[token]) {
-      result += REVERSE_NATO[token];
+  if (!recognitionSupported) {
+    speechStatusPill.textContent = 'Spracherkennung nicht verfügbar';
+    return;
+  }
+
+  speechStatusPill.textContent = 'Spracherkennung verfügbar';
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    recognitionRunning = true;
+    setFeedback('Aufnahme läuft.', 'neutral');
+  };
+
+  recognition.onend = () => {
+    recognitionRunning = false;
+  };
+
+  recognition.onerror = (event) => {
+    recognitionRunning = false;
+    setFeedback(`Spracherkennung: ${event.error}`, 'bad');
+  };
+
+  recognition.onresult = (event) => {
+    let sessionTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      sessionTranscript += `${event.results[i][0].transcript} `;
     }
-  });
 
-  return result;
+    currentTranscriptRaw = `${currentTranscriptRaw} ${sessionTranscript}`.trim();
+    currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
+    currentDerivedLetters = lettersFromCodeWords(currentRecognizedCodeWords);
+    updateSpeechViews();
+  };
+}
+
+function generateTasks(mode) {
+  if (mode === 'alphabetListen' || mode === 'alphabetSpeak') {
+    return sample(LETTERS, SESSION_LENGTH).map((letter) => ({ letter }));
+  }
+  return sample(WORDS, SESSION_LENGTH).map((word) => ({ word }));
+}
+
+function startRecognition() {
+  if (!recognitionSupported || !recognition) {
+    setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
+    return;
+  }
+
+  /* Ganz wichtig: alte Aufgabe restlos löschen */
+  stopRecognition();
+  resetSpeechState();
+
+  try {
+    recognition.start();
+  } catch (error) {
+    setFeedback('Aufnahme konnte nicht gestartet werden.', 'bad');
+  }
 }
 
 function evaluateTask() {
@@ -363,12 +418,14 @@ function evaluateTask() {
   let user = '';
   let prompt = '';
   let expectedDisplay = '';
+  let userDisplay = '';
 
   if (currentMode === 'alphabetListen') {
     expected = task.letter;
     user = typedAnswer;
     prompt = NATO[task.letter];
     expectedDisplay = expected;
+    userDisplay = user || '—';
     isCorrect = user === expected;
   }
 
@@ -377,22 +434,25 @@ function evaluateTask() {
     user = typedAnswer;
     prompt = task.word;
     expectedDisplay = expected;
+    userDisplay = user || '—';
     isCorrect = user === expected;
   }
 
   if (currentMode === 'alphabetSpeak') {
     expected = NATO[task.letter];
-    user = normalizeCodeWord(latestTranscript);
+    user = currentRecognizedCodeWords[0] || '';
     prompt = task.letter;
-    expectedDisplay = expected;
+    expectedDisplay = `${expected} → ${task.letter}`;
+    userDisplay = `NATO-Wort: ${user || '—'} | Buchstabe: ${currentDerivedLetters || '—'}`;
     isCorrect = user === expected;
   }
 
   if (currentMode === 'wordSpeak') {
     expected = normalizeText(task.word).replace(/\s+/g, '');
-    user = extractLettersFromTranscript(latestTranscript);
+    user = currentDerivedLetters;
     prompt = task.word;
     expectedDisplay = `${expected} (${natoForWord(task.word).join(' ')})`;
+    userDisplay = `NATO-Wörter: ${currentRecognizedCodeWords.join(' ') || '—'} | Buchstaben: ${user || '—'}`;
     isCorrect = user === expected;
   }
 
@@ -407,9 +467,7 @@ function evaluateTask() {
   results.push({
     prompt,
     expected: expectedDisplay,
-    user: currentMode === 'wordSpeak'
-      ? `${normalizeCodeWord(latestTranscript) || '—'} → ${user || '—'}`
-      : (user || '—'),
+    user: userDisplay,
     correct: isCorrect
   });
 
@@ -427,6 +485,8 @@ function renderTask() {
   const meta = modeMeta[currentMode];
   const task = tasks[currentIndex];
 
+  stopRecognition();
+
   exerciseTypeLabel.textContent = meta.label;
   exerciseTitle.textContent = meta.title;
   exerciseInstruction.textContent = meta.instruction;
@@ -436,10 +496,10 @@ function renderTask() {
   scoreLabel.textContent = `${score} Punkte`;
 
   typedAnswer = '';
-  latestTranscript = '';
   updateTypedAnswerView();
-  recognitionText.textContent = 'Noch keine Sprachdaten.';
+  resetSpeechState();
   setFeedback('Bereit?', 'neutral');
+  updateSpeedUI();
 
   typedAnswerBox.classList.toggle('hidden', !meta.useKeyboard);
   touchKeyboard.classList.toggle('hidden', !meta.useKeyboard);
@@ -482,6 +542,7 @@ function renderTask() {
 }
 
 function showResults() {
+  stopRecognition();
   exerciseScreen.classList.add('hidden');
   resultScreen.classList.remove('hidden');
 
@@ -539,5 +600,15 @@ startRecBtn.addEventListener('click', startRecognition);
 stopRecBtn.addEventListener('click', stopRecognition);
 checkBtn.addEventListener('click', evaluateTask);
 
+if (speedSlider) {
+  speedSlider.addEventListener('input', (event) => {
+    playbackRate = Number(event.target.value);
+    localStorage.setItem('natoPlaybackRate', String(playbackRate));
+    updateSpeedUI();
+  });
+}
+
 buildOverview();
 updateSpeechAvailability();
+loadSavedSpeed();
+resetSpeechState();
