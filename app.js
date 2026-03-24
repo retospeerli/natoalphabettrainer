@@ -27,25 +27,105 @@ const NATO = {
   Z: 'ZULU'
 };
 
+const NATO_DIGITS = {
+  '0': 'ZERO',
+  '1': 'ONE',
+  '2': 'TWO',
+  '3': 'THREE',
+  '4': 'FOUR',
+  '5': 'FIVE',
+  '6': 'SIX',
+  '7': 'SEVEN',
+  '8': 'EIGHT',
+  '9': 'NINE'
+};
+
+const REVERSE_NATO = {
+  ...Object.fromEntries(Object.entries(NATO).map(([k, v]) => [v, k])),
+  ...Object.fromEntries(Object.entries(NATO_DIGITS).map(([k, v]) => [v, k]))
+};
+
 const LETTERS = Object.keys(NATO);
-const REVERSE_NATO = Object.fromEntries(Object.entries(NATO).map(([k, v]) => [v, k]));
+const DIGITS = Object.keys(NATO_DIGITS);
 const SESSION_LENGTH = 10;
-
-const WORDS = [
-  'BANANE', 'TIGER', 'SCHULE', 'GARTEN', 'FENSTER', 'MOND', 'RADIO', 'KAMERA',
-  'BLUME', 'RITTER', 'WOLKE', 'SPINNE', 'TROMMEL', 'KARTON', 'MUSEUM', 'PLANET',
-  'ANANAS', 'KROKODIL', 'RAKETE', 'PIRAT', 'ZAUBERER', 'ELEFANT', 'LEITER', 'MOTOR',
-  'ORANGE', 'KISSEN', 'LAMPE', 'KAPITAN', 'WASSER', 'INSEL', 'SCHALTER',
-  'FERIEN', 'MELONE', 'RUCKSACK', 'TRAKTOR', 'MARMELADE', 'ROBOTER', 'GESPENST',
-  'BUCHSTABE', 'FLUGZEUG', 'KIRSCHEN', 'ABENTEUER'
-];
-
+const AUTO_STOP_SILENCE_MS = 2200;
 const AUDIO_BASE_PATH = 'audio';
 const AUDIO_EXT = '.mp3';
 
-/* Wie lange darf nach der letzten erkannten Sprache Stille sein,
-   bevor automatisch gestoppt wird? */
-const AUTO_STOP_SILENCE_MS = 2200;
+const WORD_LISTS = {
+  nativeAnimals: [
+    'FUCHS', 'DACHS', 'REH', 'HIRSCH', 'IGEL', 'MARDER', 'HASE', 'KANINCHEN',
+    'EICHHOERNCHEN', 'SPATZ', 'AMSEL', 'RABE', 'FALKE', 'MILAN', 'STORCH',
+    'FROSCH', 'KROETE', 'MOLCH', 'FORELLE', 'HECHT', 'BIBER', 'OTTER', 'MAUS'
+  ],
+  technologyVehicles: [
+    'TRACTOR', 'BAGGER', 'KRAN', 'VEL0'.replace('0','O'), 'AUTO', 'LASTWAGEN',
+    'BUS', 'TRAM', 'ZUG', 'MOTORRAD', 'FAHRRAD', 'ROLLER', 'SCHIFF', 'BOOT',
+    'UBOOT', 'FLUGZEUG', 'HELIKOPTER', 'RAKETE', 'SATELLIT', 'ROVER',
+    'DROHNE', 'COMPUTER', 'TABLET', 'ROBOTER', 'FERNSTEURUNG'
+  ],
+  buildingsLandscape: [
+    'HAUS', 'SCHULE', 'TURM', 'BRUECKE', 'SCHEUNE', 'STALL', 'BAHNHOF',
+    'KIRCHE', 'RATHAUS', 'STRASSE', 'PLATZ', 'WALD', 'WIESE', 'BERG',
+    'HUeGEL'.toUpperCase().replace('E','E'), 'TAL', 'BACH', 'FLUSS', 'SEE',
+    'UFER', 'HAFEN', 'INSEL', 'FELS', 'WEG'
+  ],
+  names: [
+    'ANNA', 'LEA', 'LINA', 'SARA', 'NORA', 'NOAH', 'LUCA', 'LEON',
+    'JONAS', 'SIMON', 'ELIN', 'MILA', 'PAUL', 'DAVID', 'MIA', 'FINN',
+    'JAN', 'NINA', 'LARA', 'TIM'
+  ],
+  leftLakeZurich: [
+    'WAEDENSWIL', 'RICHTERSWIL', 'HORGEN', 'THALWIL', 'RUESCHLIKON',
+    'KILCHBERG', 'ADLISWIL', 'LANGNAU', 'OBERRIED'.replace('OBERRIED', 'OBERRIED'),
+    'SCHOENENBERG', 'HUETTEN', 'AU', 'OBERRIED'.replace('OBER','OBER'),
+    'ZOLLIKON'.replace('Z','Z') /* Platzhalterfrei, bleibt aber gueltig */
+  ]
+};
+
+/* Bereinigung der Ortschaftenliste auf eindeutige, sinnvolle Werte */
+WORD_LISTS.leftLakeZurich = [
+  'WAEDENSWIL',
+  'RICHTERSWIL',
+  'HORGEN',
+  'THALWIL',
+  'RUESCHLIKON',
+  'KILCHBERG',
+  'ADLISWIL',
+  'LANGNAU',
+  'SCHOENENBERG',
+  'HUETTEN',
+  'AU'
+];
+
+WORD_LISTS.technologyVehicles = [
+  'TRACTOR', 'BAGGER', 'KRAN', 'AUTO', 'LASTWAGEN',
+  'BUS', 'TRAM', 'ZUG', 'MOTORRAD', 'FAHRRAD', 'ROLLER',
+  'SCHIFF', 'BOOT', 'UBOOT', 'FLUGZEUG', 'HELIKOPTER',
+  'RAKETE', 'SATELLIT', 'ROVER', 'DROHNE', 'COMPUTER',
+  'TABLET', 'ROBOTER', 'FERNSTEUERUNG'
+];
+
+WORD_LISTS.buildingsLandscape = [
+  'HAUS', 'SCHULE', 'TURM', 'BRUECKE', 'SCHEUNE', 'STALL', 'BAHNHOF',
+  'KIRCHE', 'RATHAUS', 'STRASSE', 'PLATZ', 'WALD', 'WIESE', 'BERG',
+  'HUEGEL', 'TAL', 'BACH', 'FLUSS', 'SEE', 'UFER', 'HAFEN', 'INSEL', 'FELS', 'WEG'
+];
+
+const CATEGORY_META = [
+  { id: 'nativeAnimals', title: 'Einheimische Tiere', sub: 'Tiere aus Wald, Wiese und Gewaesser' },
+  { id: 'technologyVehicles', title: 'Technik und Fahrzeuge', sub: 'Strasse, Schiffe, Luftfahrt, Weltall, Spielgeraete' },
+  { id: 'buildingsLandscape', title: 'Gebaeude und Landschaft', sub: 'Gebaeude, Wege, Naturformen' },
+  { id: 'names', title: 'Namen', sub: 'Einfache Vornamen ohne Umlaute' },
+  { id: 'leftLakeZurich', title: 'Ortschaften linkes Zuerichseeufer', sub: 'Ausgewahlte Orte der Region' },
+  { id: 'codes4', title: 'Codes 4 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 4' },
+  { id: 'codes5', title: 'Codes 5 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 5' },
+  { id: 'codes6', title: 'Codes 6 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 6' },
+  { id: 'codes7', title: 'Codes 7 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 7' },
+  { id: 'codes8', title: 'Codes 8 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 8' }
+];
+
+const DEFAULT_CATEGORIES = ['nativeAnimals', 'technologyVehicles'];
 
 const menuScreen = document.getElementById('menuScreen');
 const exerciseScreen = document.getElementById('exerciseScreen');
@@ -57,6 +137,10 @@ const speedValue = document.getElementById('speedValue');
 const speedInfoPill = document.getElementById('speedInfoPill');
 
 const overviewGrid = document.getElementById('overviewGrid');
+const categorySelectionGrid = document.getElementById('categorySelectionGrid');
+const selectAllCategoriesBtn = document.getElementById('selectAllCategoriesBtn');
+const clearAllCategoriesBtn = document.getElementById('clearAllCategoriesBtn');
+
 const modeLabel = document.getElementById('modeLabel');
 const progressLabel = document.getElementById('progressLabel');
 const scoreLabel = document.getElementById('scoreLabel');
@@ -92,29 +176,27 @@ let results = [];
 let typedAnswer = '';
 let playbackRate = 0.85;
 
-/* Nur Daten der aktuellen Aufgabe */
 let currentTranscriptRaw = '';
 let currentRecognizedCodeWords = [];
-let currentDerivedLetters = '';
+let currentDerivedText = '';
 
-/* Aufnahme-Logik */
 let silenceTimer = null;
 let manualStopRequested = false;
 
 const modeMeta = {
   alphabetListen: {
-    label: 'Alphabet hören',
-    title: 'Höre zu und wähle den Buchstaben',
-    instruction: 'Drücke auf „Anhören“. Höre den NATO-Begriff und tippe den passenden Buchstaben.',
+    label: 'Alphabet hoeren',
+    title: 'Hoere zu und waehle den Buchstaben',
+    instruction: 'Druecke auf „Anhoeren“. Hoere den NATO-Begriff und tippe den passenden Buchstaben.',
     hint: 'Es wird immer nur ein einzelner NATO-Begriff abgespielt.',
     useKeyboard: true,
     useSpeech: false
   },
   wordListen: {
-    label: 'Wörter hören',
-    title: 'Höre zu und tippe das Wort',
-    instruction: 'Drücke auf „Anhören“. Höre die Buchstabierung und tippe das ganze Wort mit der Touch-Tastatur.',
-    hint: 'Das Wort wird im NATO-Alphabet vorgelesen. Du tippst normale Buchstaben.',
+    label: 'Woerter und Codes hoeren',
+    title: 'Hoere zu und tippe Wort oder Code',
+    instruction: 'Druecke auf „Anhoeren“. Hoere die Buchstabierung und tippe das ganze Wort oder den ganzen Code.',
+    hint: 'Die Auswahl im Menue bestimmt, welche Kategorien geuebt werden.',
     useKeyboard: true,
     useSpeech: false
   },
@@ -122,15 +204,15 @@ const modeMeta = {
     label: 'Alphabet sprechen',
     title: 'Sprich den passenden NATO-Begriff',
     instruction: 'Sprich zum angezeigten Buchstaben den passenden NATO-Begriff.',
-    hint: 'Die App prüft den erkannten NATO-Begriff, nicht den Buchstabennamen.',
+    hint: 'Die App prueft den erkannten NATO-Begriff.',
     useKeyboard: false,
     useSpeech: true
   },
   wordSpeak: {
-    label: 'Wörter sprechen',
-    title: 'Buchstabiere das Wort laut',
-    instruction: 'Sprich für jeden Buchstaben den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Die Aufnahme stoppt erst nach einer längeren Sprechpause. Die App zeigt getrennt NATO-Wörter und daraus abgeleitete Buchstaben.',
+    label: 'Woerter und Codes sprechen',
+    title: 'Buchstabiere Wort oder Code laut',
+    instruction: 'Sprich fuer jedes Zeichen den passenden NATO-Begriff langsam und deutlich.',
+    hint: 'Die App zeigt getrennt an: erkannte NATO-Woerter und daraus abgeleitete Zeichen.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -145,7 +227,7 @@ function normalizeText(text) {
     .replace(/Ö/g, 'OE')
     .replace(/Ü/g, 'UE')
     .replace(/ß/g, 'SS')
-    .replace(/[^A-Z\s-]/g, ' ')
+    .replace(/[^A-Z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -154,11 +236,18 @@ function normalizeCodeWord(text) {
   return normalizeText(text).replace(/X RAY/g, 'X-RAY');
 }
 
-function natoForWord(word) {
-  return normalizeText(word)
+function getSpokenTokenForChar(char) {
+  if (NATO[char]) return NATO[char];
+  if (NATO_DIGITS[char]) return NATO_DIGITS[char];
+  return null;
+}
+
+function spokenSequenceForText(text) {
+  return normalizeText(text)
     .split('')
-    .filter((letter) => NATO[letter])
-    .map((letter) => NATO[letter]);
+    .filter(Boolean)
+    .map((char) => getSpokenTokenForChar(char))
+    .filter(Boolean);
 }
 
 function shuffle(array) {
@@ -174,17 +263,26 @@ function sample(array, count) {
   return shuffle(array).slice(0, count);
 }
 
+function randomCharForCode() {
+  const all = [...LETTERS, ...DIGITS];
+  return all[Math.floor(Math.random() * all.length)];
+}
+
+function generateRandomCode(length) {
+  let code = '';
+  for (let i = 0; i < length; i += 1) {
+    code += randomCharForCode();
+  }
+  return code;
+}
+
 function formatSpeed(value) {
   return `${Number(value).toFixed(2)}×`;
 }
 
 function updateSpeedUI() {
-  if (speedValue) {
-    speedValue.textContent = formatSpeed(playbackRate);
-  }
-  if (speedInfoPill) {
-    speedInfoPill.textContent = `Tempo: ${formatSpeed(playbackRate)}`;
-  }
+  if (speedValue) speedValue.textContent = formatSpeed(playbackRate);
+  if (speedInfoPill) speedInfoPill.textContent = `Tempo: ${formatSpeed(playbackRate)}`;
 }
 
 function loadSavedSpeed() {
@@ -195,22 +293,115 @@ function loadSavedSpeed() {
       playbackRate = num;
     }
   }
-
-  if (speedSlider) {
-    speedSlider.value = String(playbackRate);
-  }
-
+  if (speedSlider) speedSlider.value = String(playbackRate);
   updateSpeedUI();
+}
+
+function getSelectedCategories() {
+  const checked = [...document.querySelectorAll('.category-checkbox:checked')].map((el) => el.value);
+  return checked.length ? checked : [...DEFAULT_CATEGORIES];
+}
+
+function saveSelectedCategories() {
+  localStorage.setItem('natoSelectedCategories', JSON.stringify(getSelectedCategories()));
+}
+
+function loadSelectedCategories() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('natoSelectedCategories') || 'null');
+    if (Array.isArray(saved) && saved.length) return saved;
+  } catch (error) {
+    /* ignore */
+  }
+  return [...DEFAULT_CATEGORIES];
+}
+
+function buildCategorySelection() {
+  const selected = new Set(loadSelectedCategories());
+  categorySelectionGrid.innerHTML = '';
+
+  CATEGORY_META.forEach((category) => {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'category-option';
+
+    const checked = selected.has(category.id) ? 'checked' : '';
+
+    wrapper.innerHTML = `
+      <input class="category-checkbox" type="checkbox" value="${category.id}" ${checked}>
+      <span class="category-option-label">
+        <span class="category-option-title">${category.title}</span>
+        <span class="category-option-sub">${category.sub}</span>
+      </span>
+    `;
+
+    categorySelectionGrid.appendChild(wrapper);
+  });
+
+  document.querySelectorAll('.category-checkbox').forEach((checkbox) => {
+    checkbox.addEventListener('change', saveSelectedCategories);
+  });
 }
 
 function buildOverview() {
   overviewGrid.innerHTML = '';
+
   Object.entries(NATO).forEach(([letter, codeWord]) => {
     const item = document.createElement('div');
     item.className = 'overview-item';
     item.innerHTML = `<strong>${letter}</strong> – ${codeWord}`;
     overviewGrid.appendChild(item);
   });
+
+  Object.entries(NATO_DIGITS).forEach(([digit, word]) => {
+    const item = document.createElement('div');
+    item.className = 'overview-item';
+    item.innerHTML = `<strong>${digit}</strong> – ${word}`;
+    overviewGrid.appendChild(item);
+  });
+}
+
+function collectSelectableTasks() {
+  const selected = getSelectedCategories();
+  const pool = [];
+
+  selected.forEach((categoryId) => {
+    if (WORD_LISTS[categoryId]) {
+      WORD_LISTS[categoryId].forEach((value) => {
+        pool.push({ type: 'text', value, category: categoryId });
+      });
+      return;
+    }
+
+    if (categoryId.startsWith('codes')) {
+      const length = Number(categoryId.replace('codes', ''));
+      for (let i = 0; i < 18; i += 1) {
+        pool.push({
+          type: 'code',
+          value: generateRandomCode(length),
+          category: categoryId
+        });
+      }
+    }
+  });
+
+  return pool;
+}
+
+function generateTasks(mode) {
+  if (mode === 'alphabetListen' || mode === 'alphabetSpeak') {
+    return sample(LETTERS, SESSION_LENGTH).map((letter) => ({ type: 'alphabet', value: letter }));
+  }
+
+  const pool = collectSelectableTasks();
+  if (!pool.length) {
+    return sample(WORD_LISTS.nativeAnimals, SESSION_LENGTH).map((value) => ({
+      type: 'text',
+      value,
+      category: 'nativeAnimals'
+    }));
+  }
+
+  return sample(pool, Math.min(SESSION_LENGTH, pool.length));
 }
 
 function setFeedback(message, type) {
@@ -256,9 +447,9 @@ function buildKeyboard() {
     touchKeyboard.appendChild(btn);
   };
 
-  LETTERS.forEach((letter) => addKey(letter, letter));
+  [...LETTERS, ...DIGITS].forEach((char) => addKey(char, char));
   addKey('⌫', 'BACKSPACE', 'action');
-  addKey('Löschen', 'CLEAR', 'action');
+  addKey('Loeschen', 'CLEAR', 'action');
 }
 
 function sleep(ms) {
@@ -269,13 +460,9 @@ function playAudioFile(src) {
   return new Promise((resolve) => {
     const audio = new Audio(src);
     audio.playbackRate = playbackRate;
-
     audio.onended = () => resolve(true);
     audio.onerror = () => resolve(false);
-
-    audio.play()
-      .then(() => {})
-      .catch(() => resolve(false));
+    audio.play().then(() => {}).catch(() => resolve(false));
   });
 }
 
@@ -299,7 +486,6 @@ function playWithTTS(parts) {
 async function playCodeWord(codeWord) {
   const fileName = `${AUDIO_BASE_PATH}/${codeWord.toLowerCase().replace(/[^a-z-]/g, '')}${AUDIO_EXT}`;
   const played = await playAudioFile(fileName);
-
   if (!played) {
     await playWithTTS([codeWord]);
   }
@@ -307,19 +493,17 @@ async function playCodeWord(codeWord) {
 
 async function playCurrentTask() {
   const task = tasks[currentIndex];
-  setFeedback('Audio läuft …', 'neutral');
+  setFeedback('Audio laeuft …', 'neutral');
 
   if (currentMode === 'alphabetListen') {
-    await playCodeWord(NATO[task.letter]);
+    await playCodeWord(NATO[task.value]);
     return;
   }
 
-  if (currentMode === 'wordListen') {
-    const codeWords = natoForWord(task.word);
-    for (const codeWord of codeWords) {
-      await playCodeWord(codeWord);
-      await sleep(Math.max(120, 320 / playbackRate));
-    }
+  const spokenParts = spokenSequenceForText(task.value);
+  for (const part of spokenParts) {
+    await playCodeWord(part);
+    await sleep(Math.max(120, 320 / playbackRate));
   }
 }
 
@@ -330,19 +514,19 @@ function extractRecognizedCodeWords(transcript) {
     .filter((token) => REVERSE_NATO[token]);
 }
 
-function lettersFromCodeWords(codeWords) {
+function textFromCodeWords(codeWords) {
   return codeWords.map((word) => REVERSE_NATO[word]).join('');
 }
 
 function updateSpeechViews() {
   recognizedCodeWordsText.textContent = currentRecognizedCodeWords.join(' ') || '—';
-  derivedLettersText.textContent = currentDerivedLetters || '—';
+  derivedLettersText.textContent = currentDerivedText || '—';
 }
 
 function resetSpeechState() {
   currentTranscriptRaw = '';
   currentRecognizedCodeWords = [];
-  currentDerivedLetters = '';
+  currentDerivedText = '';
   updateSpeechViews();
 }
 
@@ -355,7 +539,6 @@ function clearSilenceTimer() {
 
 function restartSilenceTimer() {
   clearSilenceTimer();
-
   if (!recognitionRunning) return;
 
   silenceTimer = setTimeout(() => {
@@ -369,7 +552,6 @@ function restartSilenceTimer() {
 
 function stopRecognition() {
   clearSilenceTimer();
-
   if (recognition && recognitionRunning) {
     recognition.stop();
   }
@@ -380,11 +562,11 @@ function updateSpeechAvailability() {
   recognitionSupported = Boolean(SpeechRecognition);
 
   if (!recognitionSupported) {
-    speechStatusPill.textContent = 'Spracherkennung nicht verfügbar';
+    speechStatusPill.textContent = 'Spracherkennung nicht verfuegbar';
     return;
   }
 
-  speechStatusPill.textContent = 'Spracherkennung verfügbar';
+  speechStatusPill.textContent = 'Spracherkennung verfuegbar';
   recognition = new SpeechRecognition();
   recognition.lang = 'en-US';
   recognition.continuous = true;
@@ -393,7 +575,7 @@ function updateSpeechAvailability() {
   recognition.onstart = () => {
     recognitionRunning = true;
     restartSilenceTimer();
-    setFeedback('Aufnahme läuft.', 'neutral');
+    setFeedback('Aufnahme laeuft.', 'neutral');
   };
 
   recognition.onend = () => {
@@ -401,12 +583,11 @@ function updateSpeechAvailability() {
     clearSilenceTimer();
 
     if (!manualStopRequested && (currentMode === 'alphabetSpeak' || currentMode === 'wordSpeak')) {
-      /* Browser hat zu früh beendet: automatisch neu starten */
       try {
         recognition.start();
         return;
       } catch (error) {
-        /* Falls Neustart fehlschlägt, still weiter */
+        /* ignore */
       }
     }
 
@@ -428,24 +609,15 @@ function updateSpeechAvailability() {
 
     currentTranscriptRaw = `${currentTranscriptRaw} ${sessionTranscript}`.trim();
     currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
-    currentDerivedLetters = lettersFromCodeWords(currentRecognizedCodeWords);
+    currentDerivedText = textFromCodeWords(currentRecognizedCodeWords);
     updateSpeechViews();
-
-    /* Solange Sprache kommt, läuft der Timer immer neu */
     restartSilenceTimer();
   };
 }
 
-function generateTasks(mode) {
-  if (mode === 'alphabetListen' || mode === 'alphabetSpeak') {
-    return sample(LETTERS, SESSION_LENGTH).map((letter) => ({ letter }));
-  }
-  return sample(WORDS, SESSION_LENGTH).map((word) => ({ word }));
-}
-
 function startRecognition() {
   if (!recognitionSupported || !recognition) {
-    setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
+    setFeedback('Spracherkennung ist nicht verfuegbar.', 'bad');
     return;
   }
 
@@ -470,38 +642,38 @@ function evaluateTask() {
   let userDisplay = '';
 
   if (currentMode === 'alphabetListen') {
-    expected = task.letter;
+    expected = task.value;
     user = typedAnswer;
-    prompt = NATO[task.letter];
+    prompt = NATO[task.value];
     expectedDisplay = expected;
     userDisplay = user || '—';
     isCorrect = user === expected;
   }
 
   if (currentMode === 'wordListen') {
-    expected = normalizeText(task.word).replace(/\s+/g, '');
+    expected = normalizeText(task.value).replace(/\s+/g, '');
     user = typedAnswer;
-    prompt = task.word;
+    prompt = task.value;
     expectedDisplay = expected;
     userDisplay = user || '—';
     isCorrect = user === expected;
   }
 
   if (currentMode === 'alphabetSpeak') {
-    expected = NATO[task.letter];
+    expected = NATO[task.value];
     user = currentRecognizedCodeWords[0] || '';
-    prompt = task.letter;
-    expectedDisplay = `${expected} → ${task.letter}`;
-    userDisplay = `NATO-Wort: ${user || '—'} | Buchstabe: ${currentDerivedLetters || '—'}`;
+    prompt = task.value;
+    expectedDisplay = `${expected} → ${task.value}`;
+    userDisplay = `NATO-Wort: ${user || '—'} | Zeichen: ${currentDerivedText || '—'}`;
     isCorrect = user === expected;
   }
 
   if (currentMode === 'wordSpeak') {
-    expected = normalizeText(task.word).replace(/\s+/g, '');
-    user = currentDerivedLetters;
-    prompt = task.word;
-    expectedDisplay = `${expected} (${natoForWord(task.word).join(' ')})`;
-    userDisplay = `NATO-Wörter: ${currentRecognizedCodeWords.join(' ') || '—'} | Buchstaben: ${user || '—'}`;
+    expected = normalizeText(task.value).replace(/\s+/g, '');
+    user = currentDerivedText;
+    prompt = task.value;
+    expectedDisplay = `${expected} (${spokenSequenceForText(task.value).join(' ')})`;
+    userDisplay = `NATO-Woerter: ${currentRecognizedCodeWords.join(' ') || '—'} | Zeichen: ${user || '—'}`;
     isCorrect = user === expected;
   }
 
@@ -510,14 +682,15 @@ function evaluateTask() {
     scoreLabel.textContent = `${score} Punkte`;
     setFeedback('Richtig.', 'good');
   } else {
-    setFeedback(`Nicht korrekt. Richtig wäre: ${expectedDisplay}`, 'bad');
+    setFeedback(`Nicht korrekt. Richtig waere: ${expectedDisplay}`, 'bad');
   }
 
   results.push({
     prompt,
     expected: expectedDisplay,
     user: userDisplay,
-    correct: isCorrect
+    correct: isCorrect,
+    category: task.category || task.type || ''
   });
 
   setTimeout(() => {
@@ -566,27 +739,27 @@ function renderTask() {
 
   if (currentMode === 'alphabetListen') {
     promptText.textContent = '?';
-    promptSubText.textContent = 'Höre den NATO-Begriff und tippe den passenden Buchstaben.';
+    promptSubText.textContent = 'Hoere den NATO-Begriff und tippe den passenden Buchstaben.';
   }
 
   if (currentMode === 'wordListen') {
     promptText.textContent = '🎧';
-    promptSubText.textContent = 'Höre die Buchstabierung und tippe das Wort.';
+    promptSubText.textContent = `Kategorie: ${task.category || 'Auswahl'} | Tippe Wort oder Code.`;
   }
 
   if (currentMode === 'alphabetSpeak') {
-    promptText.textContent = task.letter;
+    promptText.textContent = task.value;
     promptSubText.textContent = 'Sprich den passenden NATO-Begriff.';
     if (!recognitionSupported) {
-      setFeedback('Diese Übung benötigt Spracherkennung.', 'bad');
+      setFeedback('Diese Uebung benoetigt Spracherkennung.', 'bad');
     }
   }
 
   if (currentMode === 'wordSpeak') {
-    promptText.textContent = task.word;
-    promptSubText.textContent = 'Buchstabiere das Wort laut im NATO-Alphabet.';
+    promptText.textContent = task.value;
+    promptSubText.textContent = `Kategorie: ${task.category || 'Auswahl'} | Buchstabiere laut im NATO-Alphabet.`;
     if (!recognitionSupported) {
-      setFeedback('Diese Übung benötigt Spracherkennung.', 'bad');
+      setFeedback('Diese Uebung benoetigt Spracherkennung.', 'bad');
     }
   }
 }
@@ -599,7 +772,7 @@ function showResults() {
   resultScreen.classList.remove('hidden');
 
   resultTitle.textContent = `${modeMeta[currentMode].label}: Session beendet`;
-  resultSummary.textContent = `Du hast ${score} von ${SESSION_LENGTH} Aufgaben richtig gelöst.`;
+  resultSummary.textContent = `Du hast ${score} von ${SESSION_LENGTH} Aufgaben richtig geloest.`;
   resultList.innerHTML = '';
 
   results.forEach((item, index) => {
@@ -607,8 +780,9 @@ function showResults() {
     entry.className = `result-item ${item.correct ? 'good' : 'bad'}`;
     entry.innerHTML = `
       <strong>Aufgabe ${index + 1}: ${item.prompt}</strong><br>
+      Kategorie: ${item.category || '—'}<br>
       Deine Antwort: ${item.user}<br>
-      Richtige Lösung: ${item.expected}
+      Richtige Loesung: ${item.expected}
     `;
     resultList.appendChild(entry);
   });
@@ -620,6 +794,11 @@ function startMode(mode) {
   score = 0;
   results = [];
   tasks = generateTasks(mode);
+
+  if (!tasks.length) {
+    setFeedback('Bitte waehle mindestens eine Kategorie.', 'bad');
+    return;
+  }
 
   menuScreen.classList.add('hidden');
   resultScreen.classList.add('hidden');
@@ -667,7 +846,26 @@ if (speedSlider) {
   });
 }
 
+if (selectAllCategoriesBtn) {
+  selectAllCategoriesBtn.addEventListener('click', () => {
+    document.querySelectorAll('.category-checkbox').forEach((checkbox) => {
+      checkbox.checked = true;
+    });
+    saveSelectedCategories();
+  });
+}
+
+if (clearAllCategoriesBtn) {
+  clearAllCategoriesBtn.addEventListener('click', () => {
+    document.querySelectorAll('.category-checkbox').forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+    saveSelectedCategories();
+  });
+}
+
 buildOverview();
+buildCategorySelection();
 updateSpeechAvailability();
 loadSavedSpeed();
 resetSpeechState();
