@@ -48,7 +48,11 @@ const REVERSE_NATO = {
 const LETTERS = Object.keys(NATO);
 const DIGITS = Object.keys(NATO_DIGITS);
 const SESSION_LENGTH = 10;
-const AUTO_STOP_SILENCE_MS = 2200;
+
+/* WICHTIG:
+   Kein automatischer Abbruch unter 3 Sekunden Sprechpause. */
+const AUTO_STOP_SILENCE_MS = 3200;
+
 const AUDIO_BASE_PATH = 'audio';
 const AUDIO_EXT = '.mp3';
 
@@ -96,56 +100,16 @@ const WORD_LISTS = {
 };
 
 const CATEGORY_META = [
-  {
-    id: 'nativeAnimals',
-    title: 'Tiere',
-    sub: 'Einheimische Tiere aus Wald, Wiese und Gewässer'
-  },
-  {
-    id: 'technologyVehicles',
-    title: 'Technik',
-    sub: 'Fahrzeuge, Geräte, Flugzeuge, Weltall und Spielgeräte'
-  },
-  {
-    id: 'buildingsLandscape',
-    title: 'Landschaft',
-    sub: 'Gebäude, Wege und Landschaftsmerkmale'
-  },
-  {
-    id: 'names',
-    title: 'Namen',
-    sub: 'Einfache Namen ohne Umlaute'
-  },
-  {
-    id: 'leftLakeZurich',
-    title: 'Orte',
-    sub: 'Ortschaften am linken Zürichseeufer'
-  },
-  {
-    id: 'codes4',
-    title: 'Code 4',
-    sub: 'Codes mit 4 Zeichen aus Buchstaben und Ziffern'
-  },
-  {
-    id: 'codes5',
-    title: 'Code 5',
-    sub: 'Codes mit 5 Zeichen aus Buchstaben und Ziffern'
-  },
-  {
-    id: 'codes6',
-    title: 'Code 6',
-    sub: 'Codes mit 6 Zeichen aus Buchstaben und Ziffern'
-  },
-  {
-    id: 'codes7',
-    title: 'Code 7',
-    sub: 'Codes mit 7 Zeichen aus Buchstaben und Ziffern'
-  },
-  {
-    id: 'codes8',
-    title: 'Code 8',
-    sub: 'Codes mit 8 Zeichen aus Buchstaben und Ziffern'
-  }
+  { id: 'nativeAnimals', title: 'Tiere', sub: 'Einheimische Tiere aus Wald, Wiese und Gewässer' },
+  { id: 'technologyVehicles', title: 'Technik', sub: 'Fahrzeuge, Geräte, Flugzeuge, Weltall und Spielgeräte' },
+  { id: 'buildingsLandscape', title: 'Landschaft', sub: 'Gebäude, Wege und Landschaftsmerkmale' },
+  { id: 'names', title: 'Namen', sub: 'Einfache Namen ohne Umlaute' },
+  { id: 'leftLakeZurich', title: 'Orte', sub: 'Ortschaften am linken Zürichseeufer' },
+  { id: 'codes4', title: 'Code 4', sub: 'Codes mit 4 Zeichen aus Buchstaben und Ziffern' },
+  { id: 'codes5', title: 'Code 5', sub: 'Codes mit 5 Zeichen aus Buchstaben und Ziffern' },
+  { id: 'codes6', title: 'Code 6', sub: 'Codes mit 6 Zeichen aus Buchstaben und Ziffern' },
+  { id: 'codes7', title: 'Code 7', sub: 'Codes mit 7 Zeichen aus Buchstaben und Ziffern' },
+  { id: 'codes8', title: 'Code 8', sub: 'Codes mit 8 Zeichen aus Buchstaben und Ziffern' }
 ];
 
 const CATEGORY_LABELS = Object.fromEntries(CATEGORY_META.map((item) => [item.id, item.title]));
@@ -211,6 +175,9 @@ let silenceTimer = null;
 let manualStopRequested = false;
 let feedbackAudio = null;
 
+/* Merkt, ob aktuell wirklich gesprochen/gehört wird */
+let speechActivityDetected = false;
+
 const modeMeta = {
   alphabetListen: {
     label: 'Alphabet hören',
@@ -240,7 +207,7 @@ const modeMeta = {
     label: 'Wörter sprechen',
     title: 'Buchstabiere laut',
     instruction: 'Sprich für jedes Zeichen den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Die App zeigt getrennt NATO-Wörter und daraus abgeleitete Zeichen.',
+    hint: 'Kein Abbruch unter 3 Sekunden Pause. Die App zeigt NATO-Wörter und daraus abgeleitete Zeichen.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -572,6 +539,7 @@ function resetSpeechState() {
   currentTranscriptRaw = '';
   currentRecognizedCodeWords = [];
   currentDerivedText = '';
+  speechActivityDetected = false;
   updateSpeechViews();
 }
 
@@ -584,6 +552,7 @@ function clearSilenceTimer() {
 
 function restartSilenceTimer() {
   clearSilenceTimer();
+
   if (!recognitionRunning) return;
 
   silenceTimer = setTimeout(() => {
@@ -616,11 +585,40 @@ function updateSpeechAvailability() {
   recognition.lang = 'en-US';
   recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     recognitionRunning = true;
-    restartSilenceTimer();
+    speechActivityDetected = false;
+    clearSilenceTimer();
     setFeedback('Aufnahme läuft.', 'neutral');
+  };
+
+  recognition.onspeechstart = () => {
+    speechActivityDetected = true;
+    clearSilenceTimer();
+  };
+
+  recognition.onsoundstart = () => {
+    speechActivityDetected = true;
+    clearSilenceTimer();
+  };
+
+  recognition.onaudiostart = () => {
+    clearSilenceTimer();
+  };
+
+  recognition.onspeechend = () => {
+    /* Erst nach echter Pause von mind. 3200 ms stoppen */
+    restartSilenceTimer();
+  };
+
+  recognition.onsoundend = () => {
+    restartSilenceTimer();
+  };
+
+  recognition.onaudioend = () => {
+    restartSilenceTimer();
   };
 
   recognition.onend = () => {
@@ -655,8 +653,11 @@ function updateSpeechAvailability() {
     currentTranscriptRaw = `${currentTranscriptRaw} ${sessionTranscript}`.trim();
     currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
     currentDerivedText = textFromCodeWords(currentRecognizedCodeWords);
+    speechActivityDetected = true;
     updateSpeechViews();
-    restartSilenceTimer();
+
+    /* Während Sprache erkannt wird: nie abbrechen */
+    clearSilenceTimer();
   };
 }
 
@@ -873,7 +874,6 @@ function backToMenu() {
 
 function openHelpWindow() {
   const win = window.open('', '_blank', 'width=760,height=820');
-
   if (!win) return;
 
   const html = `
@@ -909,9 +909,6 @@ function openHelpWindow() {
       font-size: 2rem;
       margin-bottom: 10px;
     }
-    h2 {
-      margin-bottom: 8px;
-    }
     .hint {
       color: #5b6b80;
     }
@@ -926,28 +923,22 @@ function openHelpWindow() {
 
     <div class="card">
       <h2>Alphabet hören</h2>
-      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein NATO-Wort, zum Beispiel <strong>Bravo</strong>. Danach tippst du den passenden Buchstaben auf der Tastatur. Bei <strong>Bravo</strong> wäre das der Buchstabe <strong>B</strong>.</p>
+      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein NATO-Wort, zum Beispiel <strong>Bravo</strong>. Danach tippst du den passenden Buchstaben. Bei <strong>Bravo</strong> ist das <strong>B</strong>.</p>
     </div>
 
     <div class="card">
       <h2>Wörter hören</h2>
-      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein ganzes Wort oder einen Code im NATO-Alphabet. Du hörst zum Beispiel mehrere NATO-Wörter hintereinander. Danach tippst du das ganze Wort oder den ganzen Code mit der Tastatur.</p>
+      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein ganzes Wort oder einen Code im NATO-Alphabet. Danach tippst du das ganze Wort oder den ganzen Code.</p>
     </div>
 
     <div class="card">
       <h2>Alphabet sprechen</h2>
-      <p>Du siehst einen Buchstaben. Dann drückst du auf <strong>Aufnahme starten</strong> und sprichst das passende NATO-Wort. Bei <strong>C</strong> sagst du zum Beispiel <strong>Charlie</strong>. Die App hört zu und prüft, ob das passt.</p>
+      <p>Du siehst einen Buchstaben. Dann drückst du auf <strong>Aufnahme starten</strong> und sagst das passende NATO-Wort. Bei <strong>C</strong> sagst du <strong>Charlie</strong>.</p>
     </div>
 
     <div class="card">
       <h2>Wörter sprechen</h2>
-      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die App schreibt mit, welche NATO-Wörter sie erkannt hat. Danach zeigt sie auch, welche Zeichen daraus geworden sind.</p>
-    </div>
-
-    <div class="card">
-      <h2>Tipps</h2>
-      <p>Sprich langsam und deutlich. Zwischen den NATO-Wörtern darfst du kleine Pausen machen. Wenn du eine längere Pause machst, stoppt die Aufnahme von selbst.</p>
-      <p>Du kannst im Hauptfenster das <strong>Tempo</strong> einstellen und auswählen, welche Wörter oder Codes du üben möchtest.</p>
+      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die Aufnahme stoppt nicht sofort. Erst wenn du länger als ungefähr drei Sekunden nichts sagst, endet sie.</p>
     </div>
   </div>
 </body>
