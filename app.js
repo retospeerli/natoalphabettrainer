@@ -43,6 +43,10 @@ const WORDS = [
 const AUDIO_BASE_PATH = 'audio';
 const AUDIO_EXT = '.mp3';
 
+/* Wie lange darf nach der letzten erkannten Sprache Stille sein,
+   bevor automatisch gestoppt wird? */
+const AUTO_STOP_SILENCE_MS = 2200;
+
 const menuScreen = document.getElementById('menuScreen');
 const exerciseScreen = document.getElementById('exerciseScreen');
 const resultScreen = document.getElementById('resultScreen');
@@ -93,6 +97,10 @@ let currentTranscriptRaw = '';
 let currentRecognizedCodeWords = [];
 let currentDerivedLetters = '';
 
+/* Aufnahme-Logik */
+let silenceTimer = null;
+let manualStopRequested = false;
+
 const modeMeta = {
   alphabetListen: {
     label: 'Alphabet hören',
@@ -122,7 +130,7 @@ const modeMeta = {
     label: 'Wörter sprechen',
     title: 'Buchstabiere das Wort laut',
     instruction: 'Sprich für jeden Buchstaben den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Die App zeigt getrennt an: erkannte NATO-Wörter und daraus abgeleitete Buchstaben.',
+    hint: 'Die Aufnahme stoppt erst nach einer längeren Sprechpause. Die App zeigt getrennt NATO-Wörter und daraus abgeleitete Buchstaben.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -338,7 +346,30 @@ function resetSpeechState() {
   updateSpeechViews();
 }
 
+function clearSilenceTimer() {
+  if (silenceTimer) {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  }
+}
+
+function restartSilenceTimer() {
+  clearSilenceTimer();
+
+  if (!recognitionRunning) return;
+
+  silenceTimer = setTimeout(() => {
+    if (recognitionRunning) {
+      manualStopRequested = true;
+      stopRecognition();
+      setFeedback('Aufnahme wegen Sprechpause beendet.', 'neutral');
+    }
+  }, AUTO_STOP_SILENCE_MS);
+}
+
 function stopRecognition() {
+  clearSilenceTimer();
+
   if (recognition && recognitionRunning) {
     recognition.stop();
   }
@@ -361,15 +392,30 @@ function updateSpeechAvailability() {
 
   recognition.onstart = () => {
     recognitionRunning = true;
+    restartSilenceTimer();
     setFeedback('Aufnahme läuft.', 'neutral');
   };
 
   recognition.onend = () => {
     recognitionRunning = false;
+    clearSilenceTimer();
+
+    if (!manualStopRequested && (currentMode === 'alphabetSpeak' || currentMode === 'wordSpeak')) {
+      /* Browser hat zu früh beendet: automatisch neu starten */
+      try {
+        recognition.start();
+        return;
+      } catch (error) {
+        /* Falls Neustart fehlschlägt, still weiter */
+      }
+    }
+
+    manualStopRequested = false;
   };
 
   recognition.onerror = (event) => {
     recognitionRunning = false;
+    clearSilenceTimer();
     setFeedback(`Spracherkennung: ${event.error}`, 'bad');
   };
 
@@ -384,6 +430,9 @@ function updateSpeechAvailability() {
     currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
     currentDerivedLetters = lettersFromCodeWords(currentRecognizedCodeWords);
     updateSpeechViews();
+
+    /* Solange Sprache kommt, läuft der Timer immer neu */
+    restartSilenceTimer();
   };
 }
 
@@ -400,9 +449,9 @@ function startRecognition() {
     return;
   }
 
-  /* Ganz wichtig: alte Aufgabe restlos löschen */
   stopRecognition();
   resetSpeechState();
+  manualStopRequested = false;
 
   try {
     recognition.start();
@@ -485,6 +534,7 @@ function renderTask() {
   const meta = modeMeta[currentMode];
   const task = tasks[currentIndex];
 
+  manualStopRequested = true;
   stopRecognition();
 
   exerciseTypeLabel.textContent = meta.label;
@@ -542,7 +592,9 @@ function renderTask() {
 }
 
 function showResults() {
+  manualStopRequested = true;
   stopRecognition();
+
   exerciseScreen.classList.add('hidden');
   resultScreen.classList.remove('hidden');
 
@@ -577,6 +629,7 @@ function startMode(mode) {
 }
 
 function backToMenu() {
+  manualStopRequested = true;
   stopRecognition();
 
   if ('speechSynthesis' in window) {
@@ -597,7 +650,13 @@ document.getElementById('backMenuFromResultsBtn').addEventListener('click', back
 document.getElementById('restartModeBtn').addEventListener('click', () => startMode(currentMode));
 playBtn.addEventListener('click', playCurrentTask);
 startRecBtn.addEventListener('click', startRecognition);
-stopRecBtn.addEventListener('click', stopRecognition);
+
+stopRecBtn.addEventListener('click', () => {
+  manualStopRequested = true;
+  stopRecognition();
+  setFeedback('Aufnahme manuell gestoppt.', 'neutral');
+});
+
 checkBtn.addEventListener('click', evaluateTask);
 
 if (speedSlider) {
