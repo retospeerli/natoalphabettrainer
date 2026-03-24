@@ -1,76 +1,79 @@
 <!DOCTYPE html>
-          <p>Du siehst ein Wort und tippst es im NATO-Alphabet, zum Beispiel <strong>Charlie Alfa Tango</strong>.</p>
-          <button class="btn" data-mode="wordToNato">Starten</button>
-        </div>
-
-        <div class="mode-card">
-          <h3>2. Alphabet lernen</h3>
-          <p>Du siehst einzelne Buchstaben und schreibst den passenden NATO-Begriff dazu, zum Beispiel <strong>B → Bravo</strong>.</p>
-          <button class="btn" data-mode="letterToNato">Starten</button>
-        </div>
-
-        <div class="mode-card">
-          <h3>3. Hören</h3>
-          <p>Die App buchstabiert ein Wort mit NATO-Begriffen. Du hörst zu und tippst das Wort mit.</p>
-          <button class="btn" data-mode="listen">Starten</button>
-        </div>
-
-        <div class="mode-card">
-          <h3>4. Sprechen</h3>
-          <p>Du siehst ein Wort und buchstabierst es laut im NATO-Alphabet. Die App erkennt deine Sprache und überprüft deine Antwort.</p>
-          <button class="btn" data-mode="speak">Starten</button>
-        </div>
+          <span class="menu-text">Du siehst ein Wort und buchstabierst es laut im NATO-Alphabet.</span>
+        </button>
       </div>
 
-      <div class="nato-grid" id="overviewGrid"></div>
+      <div class="overview card">
+        <h2>NATO-Übersicht</h2>
+        <div id="overviewGrid" class="overview-grid"></div>
+      </div>
     </section>
 
-    <section id="exerciseScreen" class="card hidden">
-      <div class="toolbar">
-        <button class="btn secondary" id="backToMenuBtn">← Zurück zum Menü</button>
-        <span class="pill" id="modeLabel">Übung</span>
-        <span class="pill" id="progressLabel">Aufgabe 1 / 10</span>
-        <span class="pill" id="scoreLabel">Punkte: 0</span>
+    <section id="exerciseScreen" class="screen hidden">
+      <div class="topbar card compact">
+        <button class="ghost-btn" id="backToMenuBtn">← Menü</button>
+        <div class="topbar-pills">
+          <span class="status-pill" id="modeLabel">Übung</span>
+          <span class="status-pill" id="progressLabel">1 / 10</span>
+          <span class="status-pill" id="scoreLabel">0 Punkte</span>
+        </div>
       </div>
 
-      <div class="exercise">
-        <div class="prompt-box">
+      <div class="exercise-layout">
+        <section class="card main-card">
+          <p class="eyebrow" id="exerciseTypeLabel">Übung</p>
           <h2 id="exerciseTitle">Aufgabe</h2>
-          <p class="small-muted" id="exerciseInstruction"></p>
-          <div class="big" id="promptText">A</div>
+          <p class="instruction" id="exerciseInstruction"></p>
 
-          <div class="input-row">
-            <input id="answerInput" type="text" autocomplete="off" spellcheck="false" placeholder="Deine Antwort" />
+          <div class="prompt-box">
+            <div class="prompt-main" id="promptText">A</div>
+            <div class="prompt-sub" id="promptSubText"></div>
           </div>
 
-          <div class="input-row" id="mainButtons">
-            <button class="btn" id="checkBtn">Prüfen</button>
-            <button class="btn secondary hidden" id="playBtn">▶ Anhören</button>
-            <button class="btn secondary hidden" id="startRecBtn">🎤 Aufnahme starten</button>
-            <button class="btn secondary hidden" id="stopRecBtn">■ Aufnahme stoppen</button>
+          <div class="action-row">
+            <button class="primary-btn" id="playBtn">Anhören</button>
+            <button class="primary-btn hidden" id="startRecBtn">Aufnahme starten</button>
+            <button class="ghost-btn hidden" id="stopRecBtn">Aufnahme stoppen</button>
+            <button class="ghost-btn" id="checkBtn">Prüfen</button>
+          </div>
+
+          <div id="typedAnswerBox" class="typed-answer hidden">
+            <div class="typed-label">Deine Eingabe</div>
+            <div class="typed-value" id="typedAnswerText">—</div>
+          </div>
+
+          <div id="touchKeyboard" class="touch-keyboard hidden"></div>
+
+          <div id="speechBox" class="speech-box hidden">
+            <div class="typed-label">Erkannte Sprache</div>
+            <div class="speech-live" id="recognitionText">Noch keine Sprachdaten.</div>
           </div>
 
           <div class="feedback neutral" id="feedbackBox">Bereit?</div>
-        </div>
+        </section>
 
-        <div class="info-box">
-          <h3>Live-Mitschrift</h3>
-          <div class="recognition-box" id="recognitionText">Noch keine Sprachdaten.</div>
-          <p class="small-muted">Bei der Übung <strong>Sprechen</strong> funktioniert die Erkennung je nach Browser am besten in Chrome oder Edge. Die NATO-Begriffe sollen deutlich und einzeln gesprochen werden.</p>
-        </div>
+        <aside class="card side-card">
+          <h3>Hinweis</h3>
+          <p id="sideHintText">
+            Nutze bei Sprechübungen am besten Chrome oder Edge. Sprich langsam und deutlich.
+          </p>
+        </aside>
       </div>
     </section>
 
-    <section id="resultScreen" class="card hidden">
-      <h2 id="resultTitle">Session beendet</h2>
-      <p id="resultSummary"></p>
-      <div class="results-list" id="resultList"></div>
-      <div class="toolbar">
-        <button class="btn" id="restartModeBtn">Gleiche Übung nochmals</button>
-        <button class="btn secondary" id="backMenuFromResultsBtn">Zurück zum Menü</button>
+    <section id="resultScreen" class="screen hidden">
+      <div class="card">
+        <p class="eyebrow">Auswertung</p>
+        <h2 id="resultTitle">Session beendet</h2>
+        <p id="resultSummary"></p>
+        <div id="resultList" class="result-list"></div>
+        <div class="action-row">
+          <button class="primary-btn" id="restartModeBtn">Gleiche Übung nochmals</button>
+          <button class="ghost-btn" id="backMenuFromResultsBtn">Zurück zum Menü</button>
+        </div>
       </div>
     </section>
-  </div>
+  </main>
 
   <script src="app.js"></script>
 </body>
