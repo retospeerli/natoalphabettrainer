@@ -10,99 +10,149 @@
   <main class="app-shell">
     <section id="menuScreen" class="screen">
       <div class="card hero">
-        <p class="eyebrow">NATO-Alphabet</p>
-        <h1>Hoeren und sprechen</h1>
-        <p class="lead">
-          Das NATO-Alphabet wird hier nicht geschrieben, sondern nur gehoert oder gesprochen.
-          Jede Session umfasst 10 Aufgaben.
-        </p>
+        <div class="hero-top">
+          <div>
+            <p class="eyebrow">NATO-Alphabet</p>
+            <h1>Hören und sprechen</h1>
+            <p class="lead">
+              Du trainierst das NATO-Alphabet mit Hören, Sprechen und Tippen.
+              Jede Runde hat 10 Aufgaben.
+            </p>
+          </div>
+
+          <button
+            id="openHelpBtn"
+            class="icon-btn tooltip-anchor"
+            type="button"
+            data-tooltip="Öffnet eine einfache Anleitung in einem neuen Fenster."
+            aria-label="Anleitung öffnen"
+            title="Anleitung öffnen"
+          >
+            Info
+          </button>
+        </div>
 
         <div class="status-row">
           <span class="status-pill">10 Aufgaben</span>
           <span class="status-pill">Touch-Tastatur</span>
-          <span class="status-pill" id="speechStatusPill">Spracherkennung wird geprueft …</span>
+          <span class="status-pill" id="speechStatusPill">Spracherkennung wird geprüft …</span>
         </div>
       </div>
 
-      <div class="card speed-card">
-        <h2>Sprechtempo</h2>
-        <p class="speed-help">Stelle ein, wie schnell die NATO-Begriffe abgespielt werden.</p>
+      <div class="card settings-grid">
+        <section class="settings-panel">
+          <div class="panel-head">
+            <h2>Tempo</h2>
+          </div>
+          <div class="speed-control">
+            <label for="speedSlider">Sprechtempo</label>
+            <input
+              type="range"
+              id="speedSlider"
+              min="0.5"
+              max="1.5"
+              step="0.05"
+              value="0.85"
+            />
+            <span id="speedValue">0.85×</span>
+          </div>
+        </section>
 
-        <div class="speed-control">
-          <label for="speedSlider">Tempo</label>
-          <input
-            type="range"
-            id="speedSlider"
-            min="0.5"
-            max="1.5"
-            step="0.05"
-            value="0.85"
-          />
-          <span id="speedValue">0.85×</span>
-        </div>
-      </div>
-
-      <div class="card selection-card">
-        <h2>Uebungsinhalt auswaehlen</h2>
-        <p class="speed-help">Waehle eine oder mehrere Kategorien aus. Die Auswahl gilt fuer Wort- und Code-Uebungen.</p>
-
-        <div class="selection-actions">
-          <button class="ghost-btn" id="selectAllCategoriesBtn" type="button">Alle waehlen</button>
-          <button class="ghost-btn" id="clearAllCategoriesBtn" type="button">Alle abwaehlen</button>
-        </div>
-
-        <div id="categorySelectionGrid" class="category-grid"></div>
+        <section class="settings-panel">
+          <div class="panel-head">
+            <h2>Auswahl</h2>
+            <div class="selection-actions">
+              <button class="ghost-btn small-btn" id="selectAllCategoriesBtn" type="button">Alle</button>
+              <button class="ghost-btn small-btn" id="clearAllCategoriesBtn" type="button">Keine</button>
+            </div>
+          </div>
+          <div id="categorySelectionGrid" class="category-grid"></div>
+        </section>
       </div>
 
       <div class="menu-grid">
-        <button class="menu-card" data-mode="alphabetListen">
+        <button
+          class="menu-card tooltip-anchor"
+          data-mode="alphabetListen"
+          data-tooltip="Du hörst einen NATO-Begriff und wählst den passenden Buchstaben."
+          title="Du hörst einen NATO-Begriff und wählst den passenden Buchstaben."
+        >
           <span class="menu-icon">🔊</span>
-          <span class="menu-title">Alphabet hoeren</span>
-          <span class="menu-text">Du hoerst einen NATO-Begriff und waehlst den passenden Buchstaben.</span>
+          <span class="menu-title">Alphabet hören</span>
         </button>
 
-        <button class="menu-card" data-mode="wordListen">
+        <button
+          class="menu-card tooltip-anchor"
+          data-mode="wordListen"
+          data-tooltip="Du hörst ein Wort oder einen Code und tippst ihn mit der Tastatur."
+          title="Du hörst ein Wort oder einen Code und tippst ihn mit der Tastatur."
+        >
           <span class="menu-icon">🎧</span>
-          <span class="menu-title">Woerter und Codes hoeren</span>
-          <span class="menu-text">Du hoerst ein Wort oder einen Code im NATO-Alphabet und tippst ihn mit der Touch-Tastatur.</span>
+          <span class="menu-title">Wörter hören</span>
         </button>
 
-        <button class="menu-card" data-mode="alphabetSpeak">
+        <button
+          class="menu-card tooltip-anchor"
+          data-mode="alphabetSpeak"
+          data-tooltip="Du siehst einen Buchstaben und sprichst den passenden NATO-Begriff."
+          title="Du siehst einen Buchstaben und sprichst den passenden NATO-Begriff."
+        >
           <span class="menu-icon">🎤</span>
           <span class="menu-title">Alphabet sprechen</span>
-          <span class="menu-text">Du siehst einen Buchstaben und sprichst den passenden NATO-Begriff.</span>
         </button>
 
-        <button class="menu-card" data-mode="wordSpeak">
+        <button
+          class="menu-card tooltip-anchor"
+          data-mode="wordSpeak"
+          data-tooltip="Du siehst ein Wort oder einen Code und buchstabierst ihn laut im NATO-Alphabet."
+          title="Du siehst ein Wort oder einen Code und buchstabierst ihn laut im NATO-Alphabet."
+        >
           <span class="menu-icon">🗣️</span>
-          <span class="menu-title">Woerter und Codes sprechen</span>
-          <span class="menu-text">Du siehst ein Wort oder einen Code und buchstabierst ihn laut im NATO-Alphabet.</span>
+          <span class="menu-title">Wörter sprechen</span>
         </button>
       </div>
 
       <div class="card overview">
-        <h2>NATO-Uebersicht</h2>
+        <div class="panel-head">
+          <h2>Übersicht</h2>
+          <span class="panel-subtle">Buchstaben und Ziffern</span>
+        </div>
         <div id="overviewGrid" class="overview-grid"></div>
       </div>
     </section>
 
     <section id="exerciseScreen" class="screen hidden">
       <div class="card topbar">
-        <button class="ghost-btn" id="backToMenuBtn">← Menue</button>
+        <button class="ghost-btn" id="backToMenuBtn">← Menü</button>
 
         <div class="topbar-pills">
-          <span class="status-pill" id="modeLabel">Uebung</span>
+          <span class="status-pill" id="modeLabel">Übung</span>
           <span class="status-pill" id="progressLabel">1 / 10</span>
           <span class="status-pill" id="scoreLabel">0 Punkte</span>
           <span class="status-pill" id="speedInfoPill">Tempo: 0.85×</span>
         </div>
+
+        <button
+          id="openHelpBtnExercise"
+          class="icon-btn tooltip-anchor"
+          type="button"
+          data-tooltip="Öffnet die einfache Anleitung in einem neuen Fenster."
+          aria-label="Anleitung öffnen"
+          title="Anleitung öffnen"
+        >
+          Info
+        </button>
       </div>
 
       <div class="exercise-layout">
         <section class="card main-card">
-          <p class="eyebrow" id="exerciseTypeLabel">Uebung</p>
-          <h2 id="exerciseTitle">Aufgabe</h2>
-          <p class="instruction" id="exerciseInstruction"></p>
+          <div class="exercise-head">
+            <div>
+              <p class="eyebrow" id="exerciseTypeLabel">Übung</p>
+              <h2 id="exerciseTitle">Aufgabe</h2>
+            </div>
+            <p class="instruction" id="exerciseInstruction"></p>
+          </div>
 
           <div class="prompt-box">
             <div class="prompt-main" id="promptText">A</div>
@@ -110,10 +160,10 @@
           </div>
 
           <div class="action-row">
-            <button class="primary-btn" id="playBtn">Anhoeren</button>
+            <button class="primary-btn" id="playBtn">Anhören</button>
             <button class="primary-btn hidden" id="startRecBtn">Aufnahme starten</button>
             <button class="ghost-btn hidden" id="stopRecBtn">Aufnahme stoppen</button>
-            <button class="ghost-btn" id="checkBtn">Pruefen</button>
+            <button class="ghost-btn" id="checkBtn">Prüfen</button>
           </div>
 
           <div id="typedAnswerBox" class="typed-answer hidden">
@@ -125,7 +175,7 @@
 
           <div id="speechBox" class="speech-box hidden">
             <div class="speech-row">
-              <div class="typed-label">Erkannte NATO-Woerter</div>
+              <div class="typed-label">Erkannte NATO-Wörter</div>
               <div class="speech-live" id="recognizedCodeWordsText">—</div>
             </div>
 
@@ -139,9 +189,11 @@
         </section>
 
         <aside class="card side-card">
-          <h3>Hinweis</h3>
+          <div class="panel-head">
+            <h3>Hinweis</h3>
+          </div>
           <p id="sideHintText">
-            Nutze bei Sprechuebungen am besten Chrome oder Edge. Sprich langsam und deutlich.
+            Nutze bei Sprechübungen am besten Chrome oder Edge. Sprich langsam und deutlich.
           </p>
         </aside>
       </div>
@@ -155,8 +207,8 @@
         <div id="resultList" class="result-list"></div>
 
         <div class="action-row">
-          <button class="primary-btn" id="restartModeBtn">Gleiche Uebung nochmals</button>
-          <button class="ghost-btn" id="backMenuFromResultsBtn">Zurueck zum Menue</button>
+          <button class="primary-btn" id="restartModeBtn">Noch einmal</button>
+          <button class="ghost-btn" id="backMenuFromResultsBtn">Zum Menü</button>
         </div>
       </div>
     </section>
