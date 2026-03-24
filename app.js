@@ -52,6 +52,11 @@ const AUTO_STOP_SILENCE_MS = 2200;
 const AUDIO_BASE_PATH = 'audio';
 const AUDIO_EXT = '.mp3';
 
+const FEEDBACK_AUDIO = {
+  correct: `${AUDIO_BASE_PATH}/verstanden.mp3`,
+  wrong: `${AUDIO_BASE_PATH}/wiederholen.mp3`
+};
+
 const WORD_LISTS = {
   nativeAnimals: [
     'FUCHS', 'DACHS', 'REH', 'HIRSCH', 'IGEL', 'MARDER', 'HASE', 'KANINCHEN',
@@ -59,16 +64,16 @@ const WORD_LISTS = {
     'FROSCH', 'KROETE', 'MOLCH', 'FORELLE', 'HECHT', 'BIBER', 'OTTER', 'MAUS'
   ],
   technologyVehicles: [
-    'TRACTOR', 'BAGGER', 'KRAN', 'VEL0'.replace('0','O'), 'AUTO', 'LASTWAGEN',
-    'BUS', 'TRAM', 'ZUG', 'MOTORRAD', 'FAHRRAD', 'ROLLER', 'SCHIFF', 'BOOT',
-    'UBOOT', 'FLUGZEUG', 'HELIKOPTER', 'RAKETE', 'SATELLIT', 'ROVER',
-    'DROHNE', 'COMPUTER', 'TABLET', 'ROBOTER', 'FERNSTEURUNG'
+    'TRACTOR', 'BAGGER', 'KRAN', 'AUTO', 'LASTWAGEN',
+    'BUS', 'TRAM', 'ZUG', 'MOTORRAD', 'FAHRRAD', 'ROLLER',
+    'SCHIFF', 'BOOT', 'UBOOT', 'FLUGZEUG', 'HELIKOPTER',
+    'RAKETE', 'SATELLIT', 'ROVER', 'DROHNE', 'COMPUTER',
+    'TABLET', 'ROBOTER', 'FERNSTEUERUNG'
   ],
   buildingsLandscape: [
     'HAUS', 'SCHULE', 'TURM', 'BRUECKE', 'SCHEUNE', 'STALL', 'BAHNHOF',
     'KIRCHE', 'RATHAUS', 'STRASSE', 'PLATZ', 'WALD', 'WIESE', 'BERG',
-    'HUeGEL'.toUpperCase().replace('E','E'), 'TAL', 'BACH', 'FLUSS', 'SEE',
-    'UFER', 'HAFEN', 'INSEL', 'FELS', 'WEG'
+    'HUEGEL', 'TAL', 'BACH', 'FLUSS', 'SEE', 'UFER', 'HAFEN', 'INSEL', 'FELS', 'WEG'
   ],
   names: [
     'ANNA', 'LEA', 'LINA', 'SARA', 'NORA', 'NOAH', 'LUCA', 'LEON',
@@ -76,48 +81,26 @@ const WORD_LISTS = {
     'JAN', 'NINA', 'LARA', 'TIM'
   ],
   leftLakeZurich: [
-    'WAEDENSWIL', 'RICHTERSWIL', 'HORGEN', 'THALWIL', 'RUESCHLIKON',
-    'KILCHBERG', 'ADLISWIL', 'LANGNAU', 'OBERRIED'.replace('OBERRIED', 'OBERRIED'),
-    'SCHOENENBERG', 'HUETTEN', 'AU', 'OBERRIED'.replace('OBER','OBER'),
-    'ZOLLIKON'.replace('Z','Z') /* Platzhalterfrei, bleibt aber gueltig */
+    'WAEDENSWIL',
+    'RICHTERSWIL',
+    'HORGEN',
+    'THALWIL',
+    'RUESCHLIKON',
+    'KILCHBERG',
+    'ADLISWIL',
+    'LANGNAU',
+    'SCHOENENBERG',
+    'HUETTEN',
+    'AU'
   ]
 };
-
-/* Bereinigung der Ortschaftenliste auf eindeutige, sinnvolle Werte */
-WORD_LISTS.leftLakeZurich = [
-  'WAEDENSWIL',
-  'RICHTERSWIL',
-  'HORGEN',
-  'THALWIL',
-  'RUESCHLIKON',
-  'KILCHBERG',
-  'ADLISWIL',
-  'LANGNAU',
-  'SCHOENENBERG',
-  'HUETTEN',
-  'AU'
-];
-
-WORD_LISTS.technologyVehicles = [
-  'TRACTOR', 'BAGGER', 'KRAN', 'AUTO', 'LASTWAGEN',
-  'BUS', 'TRAM', 'ZUG', 'MOTORRAD', 'FAHRRAD', 'ROLLER',
-  'SCHIFF', 'BOOT', 'UBOOT', 'FLUGZEUG', 'HELIKOPTER',
-  'RAKETE', 'SATELLIT', 'ROVER', 'DROHNE', 'COMPUTER',
-  'TABLET', 'ROBOTER', 'FERNSTEUERUNG'
-];
-
-WORD_LISTS.buildingsLandscape = [
-  'HAUS', 'SCHULE', 'TURM', 'BRUECKE', 'SCHEUNE', 'STALL', 'BAHNHOF',
-  'KIRCHE', 'RATHAUS', 'STRASSE', 'PLATZ', 'WALD', 'WIESE', 'BERG',
-  'HUEGEL', 'TAL', 'BACH', 'FLUSS', 'SEE', 'UFER', 'HAFEN', 'INSEL', 'FELS', 'WEG'
-];
 
 const CATEGORY_META = [
   { id: 'nativeAnimals', title: 'Einheimische Tiere', sub: 'Tiere aus Wald, Wiese und Gewaesser' },
   { id: 'technologyVehicles', title: 'Technik und Fahrzeuge', sub: 'Strasse, Schiffe, Luftfahrt, Weltall, Spielgeraete' },
   { id: 'buildingsLandscape', title: 'Gebaeude und Landschaft', sub: 'Gebaeude, Wege, Naturformen' },
   { id: 'names', title: 'Namen', sub: 'Einfache Vornamen ohne Umlaute' },
-  { id: 'leftLakeZurich', title: 'Ortschaften linkes Zuerichseeufer', sub: 'Ausgewahlte Orte der Region' },
+  { id: 'leftLakeZurich', title: 'Ortschaften linkes Zuerichseeufer', sub: 'Ausgewaehlte Orte der Region' },
   { id: 'codes4', title: 'Codes 4 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 4' },
   { id: 'codes5', title: 'Codes 5 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 5' },
   { id: 'codes6', title: 'Codes 6 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 6' },
@@ -182,6 +165,7 @@ let currentDerivedText = '';
 
 let silenceTimer = null;
 let manualStopRequested = false;
+let feedbackAudio = null;
 
 const modeMeta = {
   alphabetListen: {
@@ -407,6 +391,22 @@ function generateTasks(mode) {
 function setFeedback(message, type) {
   feedbackBox.textContent = message;
   feedbackBox.className = `feedback ${type}`;
+}
+
+function playFeedbackSound(kind) {
+  const src = kind === 'correct' ? FEEDBACK_AUDIO.correct : FEEDBACK_AUDIO.wrong;
+
+  try {
+    if (feedbackAudio) {
+      feedbackAudio.pause();
+      feedbackAudio.currentTime = 0;
+    }
+
+    feedbackAudio = new Audio(src);
+    feedbackAudio.play().catch(() => {});
+  } catch (error) {
+    /* ignore */
+  }
 }
 
 function updateTypedAnswerView() {
@@ -681,8 +681,10 @@ function evaluateTask() {
     score += 1;
     scoreLabel.textContent = `${score} Punkte`;
     setFeedback('Richtig.', 'good');
+    playFeedbackSound('correct');
   } else {
     setFeedback(`Nicht korrekt. Richtig waere: ${expectedDisplay}`, 'bad');
+    playFeedbackSound('wrong');
   }
 
   results.push({
