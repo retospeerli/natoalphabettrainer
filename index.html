@@ -24,6 +24,24 @@
         </div>
       </div>
 
+      <div class="card speed-card">
+        <h2>Sprechtempo</h2>
+        <p class="speed-help">Stelle ein, wie schnell die NATO-Begriffe abgespielt werden.</p>
+
+        <div class="speed-control">
+          <label for="speedSlider">Tempo</label>
+          <input
+            type="range"
+            id="speedSlider"
+            min="0.5"
+            max="1.5"
+            step="0.05"
+            value="0.85"
+          />
+          <span id="speedValue">0.85×</span>
+        </div>
+      </div>
+
       <div class="menu-grid">
         <button class="menu-card" data-mode="alphabetListen">
           <span class="menu-icon">🔊</span>
@@ -64,6 +82,7 @@
           <span class="status-pill" id="modeLabel">Übung</span>
           <span class="status-pill" id="progressLabel">1 / 10</span>
           <span class="status-pill" id="scoreLabel">0 Punkte</span>
+          <span class="status-pill" id="speedInfoPill">Tempo: 0.85×</span>
         </div>
       </div>
 
@@ -93,8 +112,15 @@
           <div id="touchKeyboard" class="touch-keyboard hidden"></div>
 
           <div id="speechBox" class="speech-box hidden">
-            <div class="typed-label">Erkannte Sprache</div>
-            <div class="speech-live" id="recognitionText">Noch keine Sprachdaten.</div>
+            <div class="speech-row">
+              <div class="typed-label">Erkannte NATO-Wörter</div>
+              <div class="speech-live" id="recognizedCodeWordsText">—</div>
+            </div>
+
+            <div class="speech-row">
+              <div class="typed-label">Daraus abgeleitete Buchstaben</div>
+              <div class="speech-live" id="derivedLettersText">—</div>
+            </div>
           </div>
 
           <div class="feedback neutral" id="feedbackBox">Bereit?</div>
