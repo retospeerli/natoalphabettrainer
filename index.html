@@ -1,17 +1,65 @@
 <!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NATO-Alphabet Trainer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section id="menuScreen" class="screen">
+      <div class="card hero">
+        <p class="eyebrow">NATO-Alphabet</p>
+        <h1>Hören und sprechen</h1>
+        <p class="lead">
+          Das NATO-Alphabet wird hier nicht geschrieben, sondern nur gehört oder gesprochen.
+          Jede Session umfasst 10 Aufgaben.
+        </p>
+
+        <div class="status-row">
+          <span class="status-pill">10 Aufgaben</span>
+          <span class="status-pill">Touch-Tastatur</span>
+          <span class="status-pill" id="speechStatusPill">Spracherkennung wird geprüft …</span>
+        </div>
+      </div>
+
+      <div class="menu-grid">
+        <button class="menu-card" data-mode="alphabetListen">
+          <span class="menu-icon">🔊</span>
+          <span class="menu-title">Alphabet hören</span>
+          <span class="menu-text">Du hörst einen NATO-Begriff und wählst den passenden Buchstaben.</span>
+        </button>
+
+        <button class="menu-card" data-mode="wordListen">
+          <span class="menu-icon">🎧</span>
+          <span class="menu-title">Wörter hören</span>
+          <span class="menu-text">Du hörst ein Wort im NATO-Alphabet und tippst es mit der Touch-Tastatur.</span>
+        </button>
+
+        <button class="menu-card" data-mode="alphabetSpeak">
+          <span class="menu-icon">🎤</span>
+          <span class="menu-title">Alphabet sprechen</span>
+          <span class="menu-text">Du siehst einen Buchstaben und sprichst den passenden NATO-Begriff.</span>
+        </button>
+
+        <button class="menu-card" data-mode="wordSpeak">
+          <span class="menu-icon">🗣️</span>
+          <span class="menu-title">Wörter sprechen</span>
           <span class="menu-text">Du siehst ein Wort und buchstabierst es laut im NATO-Alphabet.</span>
         </button>
       </div>
 
-      <div class="overview card">
+      <div class="card overview">
         <h2>NATO-Übersicht</h2>
         <div id="overviewGrid" class="overview-grid"></div>
       </div>
     </section>
 
     <section id="exerciseScreen" class="screen hidden">
-      <div class="topbar card compact">
+      <div class="card topbar">
         <button class="ghost-btn" id="backToMenuBtn">← Menü</button>
+
         <div class="topbar-pills">
           <span class="status-pill" id="modeLabel">Übung</span>
           <span class="status-pill" id="progressLabel">1 / 10</span>
@@ -67,6 +115,7 @@
         <h2 id="resultTitle">Session beendet</h2>
         <p id="resultSummary"></p>
         <div id="resultList" class="result-list"></div>
+
         <div class="action-row">
           <button class="primary-btn" id="restartModeBtn">Gleiche Übung nochmals</button>
           <button class="ghost-btn" id="backMenuFromResultsBtn">Zurück zum Menü</button>
