@@ -1,4 +1,263 @@
 :root {
+  --bg: #eef4ff;
+  --bg-2: #f8fbff;
+  --card: rgba(255, 255, 255, 0.95);
+  --line: #d8e3f2;
+  --text: #142033;
+  --muted: #5b6b80;
+  --blue: #2563eb;
+  --blue-dark: #1d4ed8;
+  --green: #15803d;
+  --red: #b91c1c;
+  --shadow: 0 18px 48px rgba(18, 42, 84, 0.12);
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, #dceaff 0%, transparent 35%),
+    linear-gradient(180deg, #edf4ff 0%, #f7fbff 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 24px));
+  margin: 20px auto 32px;
+}
+
+.screen {
+  display: grid;
+  gap: 18px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.hero {
+  padding: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--blue);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  margin-bottom: 12px;
+}
+
+.lead {
+  font-size: 1.1rem;
+  max-width: 760px;
+  color: var(--muted);
+}
+
+.status-row,
+.topbar-pills,
+.action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #edf4ff;
+  color: #1743a8;
+  font-weight: 700;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.menu-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  padding: 22px;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.06);
+}
+
+.menu-card:hover {
+  transform: translateY(-2px);
+  border-color: #b8cdf7;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+}
+
+.menu-icon {
+  font-size: 2rem;
+}
+
+.menu-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.menu-text {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.overview-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.exercise-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap: 18px;
+}
+
+@media (max-width: 920px) {
+  .exercise-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.instruction {
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+.prompt-box {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+  background: linear-gradient(180deg, #f9fbff 0%, #f3f8ff 100%);
+  margin-bottom: 16px;
+}
+
+.prompt-main {
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+  word-break: break-word;
+}
+
+.prompt-sub {
+  margin-top: 10px;
+  color: var(--muted);
+  min-height: 1.3em;
+}
+
+.primary-btn,
+.ghost-btn,
+.key-btn {
+  border: none;
+  border-radius: 16px;
+  padding: 14px 18px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primary-btn {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-dark) 100%);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.24);
+}
+
+.ghost-btn {
+  background: #eaf1ff;
+  color: #1743a8;
+}
+
+.typed-answer,
+.speech-box {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+.typed-label {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+}
+
+.typed-value,
+.speech-live {
+  font-size: 1.35rem;
+  font-weight: 800;
+  min-height: 1.4em;
+  word-break: break-word;
+}
+
+.touch-keyboard {
+  display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
