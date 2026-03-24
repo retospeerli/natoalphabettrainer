@@ -96,18 +96,59 @@ const WORD_LISTS = {
 };
 
 const CATEGORY_META = [
-  { id: 'nativeAnimals', title: 'Einheimische Tiere', sub: 'Tiere aus Wald, Wiese und Gewaesser' },
-  { id: 'technologyVehicles', title: 'Technik und Fahrzeuge', sub: 'Strasse, Schiffe, Luftfahrt, Weltall, Spielgeraete' },
-  { id: 'buildingsLandscape', title: 'Gebaeude und Landschaft', sub: 'Gebaeude, Wege, Naturformen' },
-  { id: 'names', title: 'Namen', sub: 'Einfache Vornamen ohne Umlaute' },
-  { id: 'leftLakeZurich', title: 'Ortschaften linkes Zuerichseeufer', sub: 'Ausgewaehlte Orte der Region' },
-  { id: 'codes4', title: 'Codes 4 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 4' },
-  { id: 'codes5', title: 'Codes 5 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 5' },
-  { id: 'codes6', title: 'Codes 6 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 6' },
-  { id: 'codes7', title: 'Codes 7 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 7' },
-  { id: 'codes8', title: 'Codes 8 Zeichen', sub: 'Buchstaben und Ziffern, Laenge 8' }
+  {
+    id: 'nativeAnimals',
+    title: 'Tiere',
+    sub: 'Einheimische Tiere aus Wald, Wiese und Gewässer'
+  },
+  {
+    id: 'technologyVehicles',
+    title: 'Technik',
+    sub: 'Fahrzeuge, Geräte, Flugzeuge, Weltall und Spielgeräte'
+  },
+  {
+    id: 'buildingsLandscape',
+    title: 'Landschaft',
+    sub: 'Gebäude, Wege und Landschaftsmerkmale'
+  },
+  {
+    id: 'names',
+    title: 'Namen',
+    sub: 'Einfache Namen ohne Umlaute'
+  },
+  {
+    id: 'leftLakeZurich',
+    title: 'Orte',
+    sub: 'Ortschaften am linken Zürichseeufer'
+  },
+  {
+    id: 'codes4',
+    title: 'Code 4',
+    sub: 'Codes mit 4 Zeichen aus Buchstaben und Ziffern'
+  },
+  {
+    id: 'codes5',
+    title: 'Code 5',
+    sub: 'Codes mit 5 Zeichen aus Buchstaben und Ziffern'
+  },
+  {
+    id: 'codes6',
+    title: 'Code 6',
+    sub: 'Codes mit 6 Zeichen aus Buchstaben und Ziffern'
+  },
+  {
+    id: 'codes7',
+    title: 'Code 7',
+    sub: 'Codes mit 7 Zeichen aus Buchstaben und Ziffern'
+  },
+  {
+    id: 'codes8',
+    title: 'Code 8',
+    sub: 'Codes mit 8 Zeichen aus Buchstaben und Ziffern'
+  }
 ];
 
+const CATEGORY_LABELS = Object.fromEntries(CATEGORY_META.map((item) => [item.id, item.title]));
 const DEFAULT_CATEGORIES = ['nativeAnimals', 'technologyVehicles'];
 
 const menuScreen = document.getElementById('menuScreen');
@@ -118,6 +159,9 @@ const speechStatusPill = document.getElementById('speechStatusPill');
 const speedSlider = document.getElementById('speedSlider');
 const speedValue = document.getElementById('speedValue');
 const speedInfoPill = document.getElementById('speedInfoPill');
+
+const openHelpBtn = document.getElementById('openHelpBtn');
+const openHelpBtnExercise = document.getElementById('openHelpBtnExercise');
 
 const overviewGrid = document.getElementById('overviewGrid');
 const categorySelectionGrid = document.getElementById('categorySelectionGrid');
@@ -169,34 +213,34 @@ let feedbackAudio = null;
 
 const modeMeta = {
   alphabetListen: {
-    label: 'Alphabet hoeren',
-    title: 'Hoere zu und waehle den Buchstaben',
-    instruction: 'Druecke auf „Anhoeren“. Hoere den NATO-Begriff und tippe den passenden Buchstaben.',
+    label: 'Alphabet hören',
+    title: 'Höre zu und wähle',
+    instruction: 'Höre den NATO-Begriff und tippe den passenden Buchstaben.',
     hint: 'Es wird immer nur ein einzelner NATO-Begriff abgespielt.',
     useKeyboard: true,
     useSpeech: false
   },
   wordListen: {
-    label: 'Woerter und Codes hoeren',
-    title: 'Hoere zu und tippe Wort oder Code',
-    instruction: 'Druecke auf „Anhoeren“. Hoere die Buchstabierung und tippe das ganze Wort oder den ganzen Code.',
-    hint: 'Die Auswahl im Menue bestimmt, welche Kategorien geuebt werden.',
+    label: 'Wörter hören',
+    title: 'Höre zu und tippe',
+    instruction: 'Höre die Buchstabierung und tippe das ganze Wort oder den ganzen Code.',
+    hint: 'Die Auswahl im Menü bestimmt, welche Wörter oder Codes geübt werden.',
     useKeyboard: true,
     useSpeech: false
   },
   alphabetSpeak: {
     label: 'Alphabet sprechen',
-    title: 'Sprich den passenden NATO-Begriff',
+    title: 'Sprich den NATO-Begriff',
     instruction: 'Sprich zum angezeigten Buchstaben den passenden NATO-Begriff.',
-    hint: 'Die App prueft den erkannten NATO-Begriff.',
+    hint: 'Die App prüft den erkannten NATO-Begriff.',
     useKeyboard: false,
     useSpeech: true
   },
   wordSpeak: {
-    label: 'Woerter und Codes sprechen',
-    title: 'Buchstabiere Wort oder Code laut',
-    instruction: 'Sprich fuer jedes Zeichen den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Die App zeigt getrennt an: erkannte NATO-Woerter und daraus abgeleitete Zeichen.',
+    label: 'Wörter sprechen',
+    title: 'Buchstabiere laut',
+    instruction: 'Sprich für jedes Zeichen den passenden NATO-Begriff langsam und deutlich.',
+    hint: 'Die App zeigt getrennt NATO-Wörter und daraus abgeleitete Zeichen.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -306,7 +350,9 @@ function buildCategorySelection() {
 
   CATEGORY_META.forEach((category) => {
     const wrapper = document.createElement('label');
-    wrapper.className = 'category-option';
+    wrapper.className = 'category-option tooltip-anchor';
+    wrapper.setAttribute('data-tooltip', category.sub);
+    wrapper.setAttribute('title', category.sub);
 
     const checked = selected.has(category.id) ? 'checked' : '';
 
@@ -314,7 +360,6 @@ function buildCategorySelection() {
       <input class="category-checkbox" type="checkbox" value="${category.id}" ${checked}>
       <span class="category-option-label">
         <span class="category-option-title">${category.title}</span>
-        <span class="category-option-sub">${category.sub}</span>
       </span>
     `;
 
@@ -449,7 +494,7 @@ function buildKeyboard() {
 
   [...LETTERS, ...DIGITS].forEach((char) => addKey(char, char));
   addKey('⌫', 'BACKSPACE', 'action');
-  addKey('Loeschen', 'CLEAR', 'action');
+  addKey('Löschen', 'CLEAR', 'action');
 }
 
 function sleep(ms) {
@@ -493,7 +538,7 @@ async function playCodeWord(codeWord) {
 
 async function playCurrentTask() {
   const task = tasks[currentIndex];
-  setFeedback('Audio laeuft …', 'neutral');
+  setFeedback('Audio läuft …', 'neutral');
 
   if (currentMode === 'alphabetListen') {
     await playCodeWord(NATO[task.value]);
@@ -562,11 +607,11 @@ function updateSpeechAvailability() {
   recognitionSupported = Boolean(SpeechRecognition);
 
   if (!recognitionSupported) {
-    speechStatusPill.textContent = 'Spracherkennung nicht verfuegbar';
+    speechStatusPill.textContent = 'Spracherkennung nicht verfügbar';
     return;
   }
 
-  speechStatusPill.textContent = 'Spracherkennung verfuegbar';
+  speechStatusPill.textContent = 'Spracherkennung verfügbar';
   recognition = new SpeechRecognition();
   recognition.lang = 'en-US';
   recognition.continuous = true;
@@ -575,7 +620,7 @@ function updateSpeechAvailability() {
   recognition.onstart = () => {
     recognitionRunning = true;
     restartSilenceTimer();
-    setFeedback('Aufnahme laeuft.', 'neutral');
+    setFeedback('Aufnahme läuft.', 'neutral');
   };
 
   recognition.onend = () => {
@@ -617,7 +662,7 @@ function updateSpeechAvailability() {
 
 function startRecognition() {
   if (!recognitionSupported || !recognition) {
-    setFeedback('Spracherkennung ist nicht verfuegbar.', 'bad');
+    setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
     return;
   }
 
@@ -630,6 +675,10 @@ function startRecognition() {
   } catch (error) {
     setFeedback('Aufnahme konnte nicht gestartet werden.', 'bad');
   }
+}
+
+function getCategoryLabel(categoryId) {
+  return CATEGORY_LABELS[categoryId] || categoryId || '—';
 }
 
 function evaluateTask() {
@@ -673,7 +722,7 @@ function evaluateTask() {
     user = currentDerivedText;
     prompt = task.value;
     expectedDisplay = `${expected} (${spokenSequenceForText(task.value).join(' ')})`;
-    userDisplay = `NATO-Woerter: ${currentRecognizedCodeWords.join(' ') || '—'} | Zeichen: ${user || '—'}`;
+    userDisplay = `NATO-Wörter: ${currentRecognizedCodeWords.join(' ') || '—'} | Zeichen: ${user || '—'}`;
     isCorrect = user === expected;
   }
 
@@ -683,7 +732,7 @@ function evaluateTask() {
     setFeedback('Richtig.', 'good');
     playFeedbackSound('correct');
   } else {
-    setFeedback(`Nicht korrekt. Richtig waere: ${expectedDisplay}`, 'bad');
+    setFeedback(`Nicht korrekt. Richtig wäre: ${expectedDisplay}`, 'bad');
     playFeedbackSound('wrong');
   }
 
@@ -741,27 +790,27 @@ function renderTask() {
 
   if (currentMode === 'alphabetListen') {
     promptText.textContent = '?';
-    promptSubText.textContent = 'Hoere den NATO-Begriff und tippe den passenden Buchstaben.';
+    promptSubText.textContent = 'Höre den NATO-Begriff und tippe den passenden Buchstaben.';
   }
 
   if (currentMode === 'wordListen') {
     promptText.textContent = '🎧';
-    promptSubText.textContent = `Kategorie: ${task.category || 'Auswahl'} | Tippe Wort oder Code.`;
+    promptSubText.textContent = `Kategorie: ${getCategoryLabel(task.category)} | Tippe Wort oder Code.`;
   }
 
   if (currentMode === 'alphabetSpeak') {
     promptText.textContent = task.value;
     promptSubText.textContent = 'Sprich den passenden NATO-Begriff.';
     if (!recognitionSupported) {
-      setFeedback('Diese Uebung benoetigt Spracherkennung.', 'bad');
+      setFeedback('Diese Übung benötigt Spracherkennung.', 'bad');
     }
   }
 
   if (currentMode === 'wordSpeak') {
     promptText.textContent = task.value;
-    promptSubText.textContent = `Kategorie: ${task.category || 'Auswahl'} | Buchstabiere laut im NATO-Alphabet.`;
+    promptSubText.textContent = `Kategorie: ${getCategoryLabel(task.category)} | Buchstabiere laut im NATO-Alphabet.`;
     if (!recognitionSupported) {
-      setFeedback('Diese Uebung benoetigt Spracherkennung.', 'bad');
+      setFeedback('Diese Übung benötigt Spracherkennung.', 'bad');
     }
   }
 }
@@ -774,7 +823,7 @@ function showResults() {
   resultScreen.classList.remove('hidden');
 
   resultTitle.textContent = `${modeMeta[currentMode].label}: Session beendet`;
-  resultSummary.textContent = `Du hast ${score} von ${SESSION_LENGTH} Aufgaben richtig geloest.`;
+  resultSummary.textContent = `Du hast ${score} von ${SESSION_LENGTH} Aufgaben richtig gelöst.`;
   resultList.innerHTML = '';
 
   results.forEach((item, index) => {
@@ -782,9 +831,9 @@ function showResults() {
     entry.className = `result-item ${item.correct ? 'good' : 'bad'}`;
     entry.innerHTML = `
       <strong>Aufgabe ${index + 1}: ${item.prompt}</strong><br>
-      Kategorie: ${item.category || '—'}<br>
+      Kategorie: ${getCategoryLabel(item.category)}<br>
       Deine Antwort: ${item.user}<br>
-      Richtige Loesung: ${item.expected}
+      Richtige Lösung: ${item.expected}
     `;
     resultList.appendChild(entry);
   });
@@ -798,7 +847,7 @@ function startMode(mode) {
   tasks = generateTasks(mode);
 
   if (!tasks.length) {
-    setFeedback('Bitte waehle mindestens eine Kategorie.', 'bad');
+    setFeedback('Bitte wähle mindestens eine Kategorie.', 'bad');
     return;
   }
 
@@ -820,6 +869,94 @@ function backToMenu() {
   exerciseScreen.classList.add('hidden');
   resultScreen.classList.add('hidden');
   menuScreen.classList.remove('hidden');
+}
+
+function openHelpWindow() {
+  const win = window.open('', '_blank', 'width=760,height=820');
+
+  if (!win) return;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Anleitung – NATO-Alphabet</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      background: #eef4ff;
+      color: #142033;
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d8e3f2;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 28px rgba(18, 42, 84, 0.08);
+      margin-bottom: 16px;
+    }
+    h1, h2, p {
+      margin-top: 0;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    h2 {
+      margin-bottom: 8px;
+    }
+    .hint {
+      color: #5b6b80;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>So funktioniert die App</h1>
+      <p class="hint">Hier findest du eine einfache Erklärung für jede Übungsform.</p>
+    </div>
+
+    <div class="card">
+      <h2>Alphabet hören</h2>
+      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein NATO-Wort, zum Beispiel <strong>Bravo</strong>. Danach tippst du den passenden Buchstaben auf der Tastatur. Bei <strong>Bravo</strong> wäre das der Buchstabe <strong>B</strong>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Wörter hören</h2>
+      <p>Du drückst auf <strong>Anhören</strong>. Dann hörst du ein ganzes Wort oder einen Code im NATO-Alphabet. Du hörst zum Beispiel mehrere NATO-Wörter hintereinander. Danach tippst du das ganze Wort oder den ganzen Code mit der Tastatur.</p>
+    </div>
+
+    <div class="card">
+      <h2>Alphabet sprechen</h2>
+      <p>Du siehst einen Buchstaben. Dann drückst du auf <strong>Aufnahme starten</strong> und sprichst das passende NATO-Wort. Bei <strong>C</strong> sagst du zum Beispiel <strong>Charlie</strong>. Die App hört zu und prüft, ob das passt.</p>
+    </div>
+
+    <div class="card">
+      <h2>Wörter sprechen</h2>
+      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die App schreibt mit, welche NATO-Wörter sie erkannt hat. Danach zeigt sie auch, welche Zeichen daraus geworden sind.</p>
+    </div>
+
+    <div class="card">
+      <h2>Tipps</h2>
+      <p>Sprich langsam und deutlich. Zwischen den NATO-Wörtern darfst du kleine Pausen machen. Wenn du eine längere Pause machst, stoppt die Aufnahme von selbst.</p>
+      <p>Du kannst im Hauptfenster das <strong>Tempo</strong> einstellen und auswählen, welche Wörter oder Codes du üben möchtest.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
 }
 
 document.querySelectorAll('[data-mode]').forEach((button) => {
@@ -864,6 +1001,14 @@ if (clearAllCategoriesBtn) {
     });
     saveSelectedCategories();
   });
+}
+
+if (openHelpBtn) {
+  openHelpBtn.addEventListener('click', openHelpWindow);
+}
+
+if (openHelpBtnExercise) {
+  openHelpBtnExercise.addEventListener('click', openHelpWindow);
 }
 
 buildOverview();
