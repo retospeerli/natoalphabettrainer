@@ -40,17 +40,63 @@ const NATO_DIGITS = {
   '9': 'NINE'
 };
 
-const REVERSE_NATO = {
-  ...Object.fromEntries(Object.entries(NATO).map(([k, v]) => [v, k])),
-  ...Object.fromEntries(Object.entries(NATO_DIGITS).map(([k, v]) => [v, k]))
+/* Robuste Varianten, damit die Spracherkennung nicht nach dem ersten Wort hängen bleibt */
+const SPOKEN_VARIANTS = {
+  ALFA: ['ALFA', 'ALPHA'],
+  BRAVO: ['BRAVO'],
+  CHARLIE: ['CHARLIE', 'CHARLEY'],
+  DELTA: ['DELTA'],
+  ECHO: ['ECHO', 'ECO', 'EKO'],
+  FOXTROT: ['FOXTROT', 'FOX', 'TROT', 'FOX TROT'],
+  GOLF: ['GOLF', 'GULF'],
+  HOTEL: ['HOTEL'],
+  INDIA: ['INDIA'],
+  JULIETT: ['JULIETT', 'JULIET', 'JULIETTE'],
+  KILO: ['KILO'],
+  LIMA: ['LIMA'],
+  MIKE: ['MIKE'],
+  NOVEMBER: ['NOVEMBER'],
+  OSCAR: ['OSCAR', 'OSKAR'],
+  PAPA: ['PAPA'],
+  QUEBEC: ['QUEBEC', 'QUÉBEC'],
+  ROMEO: ['ROMEO'],
+  SIERRA: ['SIERRA'],
+  TANGO: ['TANGO'],
+  UNIFORM: ['UNIFORM'],
+  VICTOR: ['VICTOR'],
+  WHISKEY: ['WHISKEY', 'WHISKY'],
+  'X-RAY': ['X-RAY', 'XRAY', 'X RAY', 'EXRAY'],
+  YANKEE: ['YANKEE'],
+  ZULU: ['ZULU'],
+  ZERO: ['ZERO'],
+  ONE: ['ONE'],
+  TWO: ['TWO', 'TO'],
+  THREE: ['THREE'],
+  FOUR: ['FOUR', 'FOR'],
+  FIVE: ['FIVE'],
+  SIX: ['SIX'],
+  SEVEN: ['SEVEN'],
+  EIGHT: ['EIGHT'],
+  NINE: ['NINE']
 };
+
+const SPOKEN_TO_CHAR = {};
+Object.entries(NATO).forEach(([char, word]) => {
+  const variants = SPOKEN_VARIANTS[word] || [word];
+  variants.forEach((variant) => {
+    SPOKEN_TO_CHAR[variant] = char;
+  });
+});
+Object.entries(NATO_DIGITS).forEach(([char, word]) => {
+  const variants = SPOKEN_VARIANTS[word] || [word];
+  variants.forEach((variant) => {
+    SPOKEN_TO_CHAR[variant] = char;
+  });
+});
 
 const LETTERS = Object.keys(NATO);
 const DIGITS = Object.keys(NATO_DIGITS);
 const SESSION_LENGTH = 10;
-
-/* WICHTIG:
-   Kein automatischer Abbruch unter 3 Sekunden Sprechpause. */
 const AUTO_STOP_SILENCE_MS = 3200;
 
 const AUDIO_BASE_PATH = 'audio';
@@ -174,8 +220,6 @@ let currentDerivedText = '';
 let silenceTimer = null;
 let manualStopRequested = false;
 let feedbackAudio = null;
-
-/* Merkt, ob aktuell wirklich gesprochen/gehört wird */
 let speechActivityDetected = false;
 
 const modeMeta = {
@@ -228,7 +272,9 @@ function normalizeText(text) {
 }
 
 function normalizeCodeWord(text) {
-  return normalizeText(text).replace(/X RAY/g, 'X-RAY');
+  return normalizeText(text)
+    .replace(/X RAY/g, 'X-RAY')
+    .replace(/FOX TROT/g, 'FOXTROT');
 }
 
 function getSpokenTokenForChar(char) {
@@ -519,15 +565,39 @@ async function playCurrentTask() {
   }
 }
 
+function tokenizeTranscript(transcript) {
+  const normalized = normalizeCodeWord(transcript);
+  const rawTokens = normalized.split(/\s+/).filter(Boolean);
+  const tokens = [];
+
+  for (let i = 0; i < rawTokens.length; i += 1) {
+    const one = rawTokens[i];
+    const two = i < rawTokens.length - 1 ? `${rawTokens[i]} ${rawTokens[i + 1]}` : null;
+
+    if (two && SPOKEN_TO_CHAR[two]) {
+      tokens.push(two);
+      i += 1;
+      continue;
+    }
+
+    if (SPOKEN_TO_CHAR[one]) {
+      tokens.push(one);
+    }
+  }
+
+  return tokens;
+}
+
 function extractRecognizedCodeWords(transcript) {
-  return normalizeCodeWord(transcript)
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((token) => REVERSE_NATO[token]);
+  const tokens = tokenizeTranscript(transcript);
+  return tokens.map((token) => {
+    const canonical = Object.entries(SPOKEN_VARIANTS).find(([, variants]) => variants.includes(token));
+    return canonical ? canonical[0] : token;
+  });
 }
 
 function textFromCodeWords(codeWords) {
-  return codeWords.map((word) => REVERSE_NATO[word]).join('');
+  return codeWords.map((word) => REVERSE_NATO[word] || SPOKEN_TO_CHAR[word] || '').join('');
 }
 
 function updateSpeechViews() {
@@ -604,20 +674,11 @@ function updateSpeechAvailability() {
     clearSilenceTimer();
   };
 
-  recognition.onaudiostart = () => {
-    clearSilenceTimer();
-  };
-
   recognition.onspeechend = () => {
-    /* Erst nach echter Pause von mind. 3200 ms stoppen */
     restartSilenceTimer();
   };
 
   recognition.onsoundend = () => {
-    restartSilenceTimer();
-  };
-
-  recognition.onaudioend = () => {
     restartSilenceTimer();
   };
 
@@ -644,19 +705,18 @@ function updateSpeechAvailability() {
   };
 
   recognition.onresult = (event) => {
-    let sessionTranscript = '';
+    let mergedTranscript = '';
 
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      sessionTranscript += `${event.results[i][0].transcript} `;
+    for (let i = 0; i < event.results.length; i += 1) {
+      mergedTranscript += `${event.results[i][0].transcript} `;
     }
 
-    currentTranscriptRaw = `${currentTranscriptRaw} ${sessionTranscript}`.trim();
+    currentTranscriptRaw = mergedTranscript.trim();
     currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
     currentDerivedText = textFromCodeWords(currentRecognizedCodeWords);
     speechActivityDetected = true;
     updateSpeechViews();
 
-    /* Während Sprache erkannt wird: nie abbrechen */
     clearSilenceTimer();
   };
 }
@@ -938,7 +998,7 @@ function openHelpWindow() {
 
     <div class="card">
       <h2>Wörter sprechen</h2>
-      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die Aufnahme stoppt nicht sofort. Erst wenn du länger als ungefähr drei Sekunden nichts sagst, endet sie.</p>
+      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die Aufnahme stoppt erst nach einer längeren Pause.</p>
     </div>
   </div>
 </body>
