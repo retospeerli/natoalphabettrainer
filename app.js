@@ -40,14 +40,13 @@ const NATO_DIGITS = {
   '9': 'NINE'
 };
 
-/* Robuste Varianten, damit die Spracherkennung nicht nach dem ersten Wort hängen bleibt */
 const SPOKEN_VARIANTS = {
   ALFA: ['ALFA', 'ALPHA'],
   BRAVO: ['BRAVO'],
   CHARLIE: ['CHARLIE', 'CHARLEY'],
   DELTA: ['DELTA'],
   ECHO: ['ECHO', 'ECO', 'EKO'],
-  FOXTROT: ['FOXTROT', 'FOX', 'TROT', 'FOX TROT'],
+  FOXTROT: ['FOXTROT', 'FOX TROT'],
   GOLF: ['GOLF', 'GULF'],
   HOTEL: ['HOTEL'],
   INDIA: ['INDIA'],
@@ -65,7 +64,7 @@ const SPOKEN_VARIANTS = {
   UNIFORM: ['UNIFORM'],
   VICTOR: ['VICTOR'],
   WHISKEY: ['WHISKEY', 'WHISKY'],
-  'X-RAY': ['X-RAY', 'XRAY', 'X RAY', 'EXRAY'],
+  'X-RAY': ['X-RAY', 'X RAY', 'XRAY'],
   YANKEE: ['YANKEE'],
   ZULU: ['ZULU'],
   ZERO: ['ZERO'],
@@ -80,24 +79,25 @@ const SPOKEN_VARIANTS = {
   NINE: ['NINE']
 };
 
-const SPOKEN_TO_CHAR = {};
+const REVERSE_NATO = {};
 Object.entries(NATO).forEach(([char, word]) => {
-  const variants = SPOKEN_VARIANTS[word] || [word];
-  variants.forEach((variant) => {
-    SPOKEN_TO_CHAR[variant] = char;
-  });
+  REVERSE_NATO[word] = char;
 });
 Object.entries(NATO_DIGITS).forEach(([char, word]) => {
-  const variants = SPOKEN_VARIANTS[word] || [word];
+  REVERSE_NATO[word] = char;
+});
+
+const SPOKEN_TO_CANONICAL = {};
+Object.entries(SPOKEN_VARIANTS).forEach(([canonical, variants]) => {
   variants.forEach((variant) => {
-    SPOKEN_TO_CHAR[variant] = char;
+    SPOKEN_TO_CANONICAL[variant] = canonical;
   });
 });
 
 const LETTERS = Object.keys(NATO);
 const DIGITS = Object.keys(NATO_DIGITS);
 const SESSION_LENGTH = 10;
-const AUTO_STOP_SILENCE_MS = 3200;
+const AUTO_STOP_SILENCE_MS = 3500;
 
 const AUDIO_BASE_PATH = 'audio';
 const AUDIO_EXT = '.mp3';
@@ -202,9 +202,6 @@ const resultTitle = document.getElementById('resultTitle');
 const resultSummary = document.getElementById('resultSummary');
 const resultList = document.getElementById('resultList');
 
-let recognition = null;
-let recognitionSupported = false;
-let recognitionRunning = false;
 let currentMode = null;
 let currentIndex = 0;
 let score = 0;
@@ -213,14 +210,21 @@ let results = [];
 let typedAnswer = '';
 let playbackRate = 0.85;
 
-let currentTranscriptRaw = '';
 let currentRecognizedCodeWords = [];
 let currentDerivedText = '';
 
-let silenceTimer = null;
-let manualStopRequested = false;
 let feedbackAudio = null;
-let speechActivityDetected = false;
+
+/* Speech state */
+let SpeechRecognitionCtor = null;
+let recognition = null;
+let recognitionSupported = false;
+let recognitionRunning = false;
+let shouldKeepListening = false;
+let silenceTimer = null;
+let restartTimer = null;
+let aggregatedFinalTranscript = '';
+let latestInterimTranscript = '';
 
 const modeMeta = {
   alphabetListen: {
@@ -251,7 +255,7 @@ const modeMeta = {
     label: 'Wörter sprechen',
     title: 'Buchstabiere laut',
     instruction: 'Sprich für jedes Zeichen den passenden NATO-Begriff langsam und deutlich.',
-    hint: 'Kein Abbruch unter 3 Sekunden Pause. Die App zeigt NATO-Wörter und daraus abgeleitete Zeichen.',
+    hint: 'Die Aufnahme bleibt aktiv und stoppt erst nach einer längeren Pause.',
     useKeyboard: false,
     useSpeech: true
   }
@@ -574,13 +578,13 @@ function tokenizeTranscript(transcript) {
     const one = rawTokens[i];
     const two = i < rawTokens.length - 1 ? `${rawTokens[i]} ${rawTokens[i + 1]}` : null;
 
-    if (two && SPOKEN_TO_CHAR[two]) {
+    if (two && SPOKEN_TO_CANONICAL[two]) {
       tokens.push(two);
       i += 1;
       continue;
     }
 
-    if (SPOKEN_TO_CHAR[one]) {
+    if (SPOKEN_TO_CANONICAL[one]) {
       tokens.push(one);
     }
   }
@@ -588,16 +592,14 @@ function tokenizeTranscript(transcript) {
   return tokens;
 }
 
-function extractRecognizedCodeWords(transcript) {
-  const tokens = tokenizeTranscript(transcript);
-  return tokens.map((token) => {
-    const canonical = Object.entries(SPOKEN_VARIANTS).find(([, variants]) => variants.includes(token));
-    return canonical ? canonical[0] : token;
-  });
+function parseTranscriptToCanonicalWords(transcript) {
+  return tokenizeTranscript(transcript)
+    .map((token) => SPOKEN_TO_CANONICAL[token])
+    .filter(Boolean);
 }
 
-function textFromCodeWords(codeWords) {
-  return codeWords.map((word) => REVERSE_NATO[word] || SPOKEN_TO_CHAR[word] || '').join('');
+function wordsToCharacters(words) {
+  return words.map((word) => REVERSE_NATO[word] || '').join('');
 }
 
 function updateSpeechViews() {
@@ -606,10 +608,17 @@ function updateSpeechViews() {
 }
 
 function resetSpeechState() {
-  currentTranscriptRaw = '';
+  aggregatedFinalTranscript = '';
+  latestInterimTranscript = '';
   currentRecognizedCodeWords = [];
   currentDerivedText = '';
-  speechActivityDetected = false;
+  updateSpeechViews();
+}
+
+function refreshSpeechParsing() {
+  const combined = `${aggregatedFinalTranscript} ${latestInterimTranscript}`.trim();
+  currentRecognizedCodeWords = parseTranscriptToCanonicalWords(combined);
+  currentDerivedText = wordsToCharacters(currentRecognizedCodeWords);
   updateSpeechViews();
 }
 
@@ -620,122 +629,185 @@ function clearSilenceTimer() {
   }
 }
 
-function restartSilenceTimer() {
+function armSilenceTimer() {
   clearSilenceTimer();
 
-  if (!recognitionRunning) return;
+  if (!shouldKeepListening) return;
 
   silenceTimer = setTimeout(() => {
-    if (recognitionRunning) {
-      manualStopRequested = true;
-      stopRecognition();
-      setFeedback('Aufnahme wegen Sprechpause beendet.', 'neutral');
-    }
+    stopRecognitionSession(true);
+    setFeedback('Aufnahme wegen Sprechpause beendet.', 'neutral');
   }, AUTO_STOP_SILENCE_MS);
 }
 
-function stopRecognition() {
-  clearSilenceTimer();
-  if (recognition && recognitionRunning) {
-    recognition.stop();
+function clearRestartTimer() {
+  if (restartTimer) {
+    clearTimeout(restartTimer);
+    restartTimer = null;
   }
 }
 
-function updateSpeechAvailability() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognitionSupported = Boolean(SpeechRecognition);
+function createRecognitionInstance() {
+  if (!SpeechRecognitionCtor) return null;
 
-  if (!recognitionSupported) {
-    speechStatusPill.textContent = 'Spracherkennung nicht verfügbar';
-    return;
-  }
+  const rec = new SpeechRecognitionCtor();
+  rec.lang = 'en-US';
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  return rec;
+}
 
-  speechStatusPill.textContent = 'Spracherkennung verfügbar';
-  recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  recognition.onstart = () => {
+function attachRecognitionHandlers(rec) {
+  rec.onstart = () => {
     recognitionRunning = true;
-    speechActivityDetected = false;
+    clearRestartTimer();
     clearSilenceTimer();
     setFeedback('Aufnahme läuft.', 'neutral');
   };
 
-  recognition.onspeechstart = () => {
-    speechActivityDetected = true;
-    clearSilenceTimer();
-  };
+  rec.onresult = (event) => {
+    let finalPart = '';
+    let interimPart = '';
 
-  recognition.onsoundstart = () => {
-    speechActivityDetected = true;
-    clearSilenceTimer();
-  };
-
-  recognition.onspeechend = () => {
-    restartSilenceTimer();
-  };
-
-  recognition.onsoundend = () => {
-    restartSilenceTimer();
-  };
-
-  recognition.onend = () => {
-    recognitionRunning = false;
-    clearSilenceTimer();
-
-    if (!manualStopRequested && (currentMode === 'alphabetSpeak' || currentMode === 'wordSpeak')) {
-      try {
-        recognition.start();
-        return;
-      } catch (error) {
-        /* ignore */
+    for (let i = event.resultIndex; i < event.results.length; i += 1) {
+      const transcript = event.results[i][0].transcript || '';
+      if (event.results[i].isFinal) {
+        finalPart += `${transcript} `;
+      } else {
+        interimPart += `${transcript} `;
       }
     }
 
-    manualStopRequested = false;
-  };
-
-  recognition.onerror = (event) => {
-    recognitionRunning = false;
-    clearSilenceTimer();
-    setFeedback(`Spracherkennung: ${event.error}`, 'bad');
-  };
-
-  recognition.onresult = (event) => {
-    let mergedTranscript = '';
-
-    for (let i = 0; i < event.results.length; i += 1) {
-      mergedTranscript += `${event.results[i][0].transcript} `;
+    if (finalPart.trim()) {
+      aggregatedFinalTranscript = `${aggregatedFinalTranscript} ${finalPart}`.trim();
     }
 
-    currentTranscriptRaw = mergedTranscript.trim();
-    currentRecognizedCodeWords = extractRecognizedCodeWords(currentTranscriptRaw);
-    currentDerivedText = textFromCodeWords(currentRecognizedCodeWords);
-    speechActivityDetected = true;
-    updateSpeechViews();
-
+    latestInterimTranscript = interimPart.trim();
+    refreshSpeechParsing();
     clearSilenceTimer();
+  };
+
+  rec.onspeechstart = () => {
+    clearSilenceTimer();
+  };
+
+  rec.onsoundstart = () => {
+    clearSilenceTimer();
+  };
+
+  rec.onspeechend = () => {
+    armSilenceTimer();
+  };
+
+  rec.onsoundend = () => {
+    armSilenceTimer();
+  };
+
+  rec.onerror = (event) => {
+    recognitionRunning = false;
+
+    /* no-speech ist bei Pausen normal; nicht hart abbrechen */
+    if (event.error === 'no-speech' || event.error === 'aborted') {
+      if (shouldKeepListening) {
+        scheduleRecognitionRestart();
+      }
+      return;
+    }
+
+    setFeedback(`Spracherkennung: ${event.error}`, 'bad');
+
+    if (shouldKeepListening) {
+      scheduleRecognitionRestart();
+    }
+  };
+
+  rec.onend = () => {
+    recognitionRunning = false;
+
+    if (shouldKeepListening) {
+      scheduleRecognitionRestart();
+    }
   };
 }
 
-function startRecognition() {
-  if (!recognitionSupported || !recognition) {
+function startRecognitionSession() {
+  if (!SpeechRecognitionCtor) {
     setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
     return;
   }
 
-  stopRecognition();
-  resetSpeechState();
-  manualStopRequested = false;
+  clearRestartTimer();
 
   try {
+    recognition = createRecognitionInstance();
+    attachRecognitionHandlers(recognition);
     recognition.start();
   } catch (error) {
-    setFeedback('Aufnahme konnte nicht gestartet werden.', 'bad');
+    scheduleRecognitionRestart();
   }
+}
+
+function scheduleRecognitionRestart() {
+  if (!shouldKeepListening) return;
+  if (recognitionRunning) return;
+  if (restartTimer) return;
+
+  restartTimer = setTimeout(() => {
+    restartTimer = null;
+    if (shouldKeepListening && !recognitionRunning) {
+      startRecognitionSession();
+    }
+  }, 180);
+}
+
+function stopRecognitionSession(manual = false) {
+  shouldKeepListening = false;
+  clearRestartTimer();
+  clearSilenceTimer();
+
+  if (manual) {
+    setFeedback('Aufnahme manuell gestoppt.', 'neutral');
+  }
+
+  try {
+    if (recognition) {
+      recognition.onstart = null;
+      recognition.onresult = null;
+      recognition.onspeechstart = null;
+      recognition.onsoundstart = null;
+      recognition.onspeechend = null;
+      recognition.onsoundend = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      recognition.abort();
+    }
+  } catch (error) {
+    /* ignore */
+  }
+
+  recognition = null;
+  recognitionRunning = false;
+}
+
+function updateSpeechAvailability() {
+  SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  recognitionSupported = Boolean(SpeechRecognitionCtor);
+  speechStatusPill.textContent = recognitionSupported
+    ? 'Spracherkennung verfügbar'
+    : 'Spracherkennung nicht verfügbar';
+}
+
+function startRecognition() {
+  if (!recognitionSupported) {
+    setFeedback('Spracherkennung ist nicht verfügbar.', 'bad');
+    return;
+  }
+
+  stopRecognitionSession(false);
+  resetSpeechState();
+  shouldKeepListening = true;
+  startRecognitionSession();
 }
 
 function getCategoryLabel(categoryId) {
@@ -819,8 +891,7 @@ function renderTask() {
   const meta = modeMeta[currentMode];
   const task = tasks[currentIndex];
 
-  manualStopRequested = true;
-  stopRecognition();
+  stopRecognitionSession(false);
 
   exerciseTypeLabel.textContent = meta.label;
   exerciseTitle.textContent = meta.title;
@@ -877,8 +948,7 @@ function renderTask() {
 }
 
 function showResults() {
-  manualStopRequested = true;
-  stopRecognition();
+  stopRecognitionSession(false);
 
   exerciseScreen.classList.add('hidden');
   resultScreen.classList.remove('hidden');
@@ -920,8 +990,7 @@ function startMode(mode) {
 }
 
 function backToMenu() {
-  manualStopRequested = true;
-  stopRecognition();
+  stopRecognitionSession(false);
 
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -998,7 +1067,7 @@ function openHelpWindow() {
 
     <div class="card">
       <h2>Wörter sprechen</h2>
-      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die Aufnahme stoppt erst nach einer längeren Pause.</p>
+      <p>Du siehst ein Wort oder einen Code. Dann drückst du auf <strong>Aufnahme starten</strong> und buchstabierst alles laut im NATO-Alphabet. Die Aufnahme bleibt aktiv und sammelt mehrere NATO-Wörter hintereinander.</p>
     </div>
   </div>
 </body>
@@ -1021,9 +1090,7 @@ playBtn.addEventListener('click', playCurrentTask);
 startRecBtn.addEventListener('click', startRecognition);
 
 stopRecBtn.addEventListener('click', () => {
-  manualStopRequested = true;
-  stopRecognition();
-  setFeedback('Aufnahme manuell gestoppt.', 'neutral');
+  stopRecognitionSession(true);
 });
 
 checkBtn.addEventListener('click', evaluateTask);
@@ -1062,8 +1129,8 @@ if (openHelpBtnExercise) {
   openHelpBtnExercise.addEventListener('click', openHelpWindow);
 }
 
+updateSpeechAvailability();
 buildOverview();
 buildCategorySelection();
-updateSpeechAvailability();
 loadSavedSpeed();
 resetSpeechState();
